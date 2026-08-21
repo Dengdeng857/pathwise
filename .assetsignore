@@ -1,0 +1,10 @@
+node_modules
+.git
+.wrangler
+__pycache__
+*.pyc
+.env
+README.md
+requirements.txt
+package-lock.json
+bun.lock
