@@ -1,0 +1,9 @@
+{
+  "name": "pathwise-career-companion",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Evidence-driven AI career planning companion",
+  "dependencies": {
+    "unpdf": "^0.12.1"
+  }
+}
