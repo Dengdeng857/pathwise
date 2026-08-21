@@ -26,6 +26,7 @@ export async function chat(env, messages, maxTokens = 1800) {
       messages,
       temperature: 0.2,
       max_tokens: maxTokens,
+      enable_thinking: false,
       stream: false
     })
   });

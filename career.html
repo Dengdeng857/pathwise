@@ -1,1 +1,102 @@
-<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Pathwise · 毕业去向导航</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="career.css"></head><body><main class="shell"><aside class="side"><div class="logo"><b>P</b> pathwise</div><div class="side-label">我的路径</div><button class="side-link active">◈ 当前画像</button><button class="side-link">⌁ 岗位地图</button><button class="side-link">✓ 行动清单<span>3</span></button><div class="side-note"><small>本周建议</small><strong>完成 1 个<br>可展示的案例</strong><p>比收藏 20 个岗位更有用。</p></div><div class="user"><div class="avatar">林</div><div><strong>林默</strong><small>本科 · 计算机</small></div></div></aside><section class="main"><header class="top"><div><span class="kicker">PATHWISE / 2024.06</span><h1>毕业去哪里，先看清下一步。</h1><p>根据你现在的阶段和经历，找到毕业时真正够得着的岗位。</p></div><button class="ghost" id="editProfile">编辑画像 ↗</button></header><section class="profile-bar panel"><div class="profile-main"><div class="profile-orb">CS</div><div><span class="kicker">CURRENT PROFILE</span><h2>本科大三下 · 211 计算机</h2><p>有 2 个 AI 项目 · Python · 暂无产品实习</p></div></div><div class="profile-stats"><div><small>距毕业</small><strong>14<span>个月</span></strong></div><div><small>目标岗位</small><strong>AI 产品</strong></div><div><small>画像完整度</small><strong>68<span>%</span></strong></div></div></section><div class="section-head"><div><span class="kicker">YOUR RANGE</span><h2>现在到毕业，你的岗位范围</h2></div><button class="compare" id="compareBtn">对比岗位路径</button></div><section class="range-grid"><article class="range-card now"><div class="range-head"><span class="tag green">现在就能投</span><span>匹配度 78</span></div><h3>AI 产品实习生</h3><p>技术理解是优势，先用实习补齐真实业务经验。</p><div class="match-bar"><i style="width:78%"></i></div><button class="open-guide" data-guide="now">查看投递指导 <b>→</b></button></article><article class="range-card grad"><div class="range-head"><span class="tag yellow">毕业时可达</span><span>匹配度 64</span></div><h3>AI 应用产品经理</h3><p>需要至少一段业务实习和一个有数据结果的项目。</p><div class="match-bar"><i style="width:64%"></i></div><button class="open-guide" data-guide="grad">查看成长路径 <b>→</b></button></article><article class="range-card stretch"><div class="range-head"><span class="tag coral">目前有差距</span><span>匹配度 39</span></div><h3>头部大厂 AI 产品岗</h3><p>竞争激烈，当前缺真实业务、指标和上线经验。</p><div class="match-bar"><i style="width:39%"></i></div><button class="open-guide" data-guide="stretch">查看差距分析 <b>→</b></button></article></section><section class="journey"><div class="section-head"><div><span class="kicker">NEXT MOVES</span><h2>把差距变成 3 个可执行阶段</h2></div><span class="hint">每完成一步，画像会自动更新</span></div><div class="steps"><div class="step active"><div class="step-index">01</div><div class="step-body"><div class="step-title"><h3>拿到第一段 AI 产品实习</h3><span>现在 · 0/3</span></div><p>先进入技术产品、AI 应用或解决方案团队，证明你能理解真实用户和业务。</p><div class="step-actions"><button class="task" data-task="拆解 10 个目标岗位">＋ 拆解 10 个目标岗位</button><button class="task" data-task="完成一份产品案例">＋ 完成一份产品案例</button><button class="task" data-task="准备技术面试题">＋ 准备技术面试题</button></div><button class="guide-link" data-guide="step1">打开本阶段指导 →</button></div></div><div class="step"><div class="step-index">02</div><div class="step-body"><div class="step-title"><h3>把项目做成可验证的案例</h3><span>暑期 · 未开始</span></div><p>从“我做过一个 AI Demo”变成“我让某类用户完成率提升了 20%”。</p><button class="guide-link" data-guide="step2">查看完成标准 →</button></div></div><div class="step"><div class="step-index">03</div><div class="step-body"><div class="step-title"><h3>冲刺毕业校招 AI 产品岗</h3><span>大四 · 未开始</span></div><p>用实习结果、项目指标和对业务的理解，匹配更高阶的校招岗位。</p><button class="guide-link" data-guide="step3">查看准备节奏 →</button></div></div></div></section></section></main><div class="drawer-backdrop" id="drawer"><aside class="drawer"><button class="close" id="closeDrawer">×</button><span class="kicker" id="drawerKicker">STAGE GUIDE</span><h2 id="drawerTitle">本阶段指导</h2><p id="drawerIntro"></p><div id="drawerContent"></div><button class="primary" id="drawerDone">加入我的行动清单</button></aside></div><div class="toast" id="toast"></div><script src="career.js"></script></body></html>
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0d2f2d">
+  <title>Pathwise · 小径职业陪伴</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="redesign.css">
+</head>
+<body>
+  <main class="app-shell">
+    <aside class="side">
+      <a class="logo" href="#overview" aria-label="Pathwise 首页"><b>P</b><span>pathwise</span><small>career companion</small></a>
+      <div class="side-label">MY PATH</div>
+      <nav class="side-nav" aria-label="主导航">
+        <button class="side-link active" data-target="overview"><span class="nav-icon">⌂</span>路径总览</button>
+        <button class="side-link" data-target="roles"><span class="nav-icon">⌁</span>岗位地图</button>
+        <button class="side-link" data-target="route"><span class="nav-icon">✓</span>行动路径<span class="nav-count" id="pendingCount">3</span></button>
+        <button class="side-link" data-target="evidence"><span class="nav-icon">＋</span>进展证据</button>
+        <button class="side-link" data-target="growth"><span class="nav-icon">↗</span>成长报告</button>
+      </nav>
+      <div class="side-focus"><span class="kicker">NEXT MOVE</span><strong id="focusTitle">完成第一个可验证行动</strong><p id="focusMeta">结果会成为下一次路径判断的依据。</p><button id="sideFocusBtn" type="button">打开行动 <span>→</span></button></div>
+      <button class="reset-path" type="button"><span>↻</span> 重置我的路径</button>
+      <div class="user"><div class="avatar" id="avatarText">P</div><div><strong>我的职业路径</strong><small id="userMeta">本地持续保存</small></div><span class="save-dot" title="数据已保存"></span></div>
+    </aside>
+
+    <section class="main">
+      <header class="top" id="overview">
+        <div class="top-copy">
+          <div class="top-status"><span class="status-dot"></span><span id="aiStatus">正在连接规划引擎</span></div>
+          <h1>把下一步，<br>变成看得见的路。</h1>
+          <p>画像不是一次填写完的档案。每次项目、面试和行动结果，都会让毕业去向重新校准。</p>
+          <div class="top-actions"><button class="primary" id="editProfile" type="button">更新基本信息 <span>↗</span></button><button class="icon-button" id="themeToggle" type="button" aria-label="切换深色模式" title="切换深色模式">◐</button></div>
+        </div>
+        <div class="hero-visual">
+          <img src="https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&fit=crop&w=1400&q=88" alt="年轻团队在真实工作场景中讨论项目">
+          <div class="hero-fallback-art" aria-hidden="true"><b>PATH<br>WISE</b><i>career map / live</i></div>
+          <div class="hero-signal"><i></i><span>PATH ACTIVE</span></div>
+          <div class="hero-caption"><span>LIVE 01</span><strong>经历在变化，路径也应该变化。</strong></div>
+        </div>
+        <div class="top-meta"><span><i></i> 浏览器本地留存</span><b id="clock">--:--</b></div>
+      </header>
+
+      <section class="identity" aria-labelledby="profileTitle">
+        <div class="identity-main"><div class="profile-orb" id="profileOrb">CS</div><div><span class="kicker">CURRENT PROFILE</span><h2 id="profileTitle">本科大三下 · 211 信息安全</h2><p id="profileSummary">掌握 Python，有 2 个项目经验 · 目标：软件安全工程师</p></div></div>
+        <div class="identity-stats"><div><small>当前阶段</small><strong id="stageStat">大三下</strong></div><div><small>目标方向</small><strong id="targetStat">软件安全</strong></div><div><small>画像完整度</small><strong id="profileScore">52<em>%</em></strong></div></div>
+        <button class="text-button profile-edit-inline" type="button">编辑基本信息</button>
+      </section>
+
+      <section class="role-section page-section" id="roles">
+        <div class="section-head"><div><span class="kicker">ROLE RANGE</span><h2>现在到毕业，岗位边界在哪里？</h2><p>不是承诺录取，而是用现有证据判断现实入口、毕业落点与进阶选择。</p></div><button class="text-button" id="compareBtn" type="button">怎么看匹配度 <span>↗</span></button></div>
+        <div class="role-grid">
+          <article class="role-card now"><div class="role-top"><span class="role-tag">现在可投</span><strong><b class="match-value">--</b> MATCH</strong></div><h3>正在读取岗位</h3><p>根据当前画像生成现实入口。</p><div class="match-track"><i></i></div><button class="open-guide" data-role-index="0" type="button">查看投递建议 <span>→</span></button></article>
+          <article class="role-card graduation"><div class="role-top"><span class="role-tag">毕业落点</span><strong><b class="match-value">--</b> MATCH</strong></div><h3>正在读取岗位</h3><p>根据毕业前可补齐的证据生成。</p><div class="match-track"><i></i></div><button class="open-guide" data-role-index="1" type="button">查看成长条件 <span>→</span></button></article>
+          <article class="role-card stretch"><div class="role-top"><span class="role-tag">进阶选择</span><strong><b class="match-value">--</b> MATCH</strong></div><h3>正在读取岗位</h3><p>需要更多能力证据，不会被固定成某个旧目标。</p><div class="match-track"><i></i></div><button class="open-guide" data-role-index="2" type="button">查看关键差距 <span>→</span></button></article>
+        </div>
+        <div class="gap-strip"><span>当前关键差距</span><div id="gapList"><i>等待画像分析</i></div></div>
+      </section>
+
+      <section class="journey page-section" id="route">
+        <div class="section-head"><div><span class="kicker">THE ROUTE</span><h2>三站，走完从现在到毕业</h2><p>每个小行动都能单独展开指导；完成后留下成果，计划才会真正改变。</p></div><span class="route-status"><i></i><b id="doneCount">0</b> 项行动已完成</span></div>
+        <div class="steps" id="stageList"></div>
+      </section>
+
+      <section class="evidence-workspace page-section" id="evidence">
+        <div class="section-head"><div><span class="kicker">LIVE EVIDENCE</span><h2>进展与证据链</h2><p>进展只记录事实，材料只展示摘要；原文留给 AI 重新判断路径。</p></div><span class="live-mark"><i></i> 持续更新</span></div>
+        <div class="evidence-layout">
+          <div class="evidence-compose">
+            <div class="compose-tabs" role="tablist"><button class="active" type="button" data-compose="update">说一条进展</button><button type="button" data-compose="material">添加材料</button></div>
+            <div class="compose-pane active" data-pane="update"><label for="updateInput">最近发生了什么？</label><textarea id="updateInput" rows="4" placeholder="例如：完成一次软件安全面试，发现代码审计案例讲得不够具体"></textarea><div class="quick-updates"><button data-update="完成了一次目标岗位面试" type="button">面试反馈</button><button data-update="完成一个可展示项目" type="button">项目完成</button><button data-update="开始第一段相关实习" type="button">获得实习</button><button data-update="收到一次投递结果" type="button">投递结果</button></div><button class="primary compose-submit" id="addUpdate" type="button">记录并更新路径 <span>↗</span></button></div>
+            <div class="compose-pane" data-pane="material"><label for="evidenceType">这份材料是什么？</label><select id="evidenceType"><option>简历</option><option>面试复盘</option><option>项目成果</option><option>岗位反馈</option><option>行动成果</option></select><textarea id="evidenceInput" rows="3" placeholder="粘贴关键内容，或直接上传 PDF / 文本文档"></textarea><button class="primary compose-submit" id="addEvidence" type="button">分析并调整计划 <span>↗</span></button><label class="upload-evidence"><input id="evidenceFile" type="file" accept=".txt,.md,.pdf,.json,.csv"><span>＋ 选择文件</span><small>线上支持 PDF、TXT、MD、JSON、CSV</small></label><div class="evidence-status" id="evidenceStatus"></div></div>
+          </div>
+          <div class="activity-stream"><div class="stream-head"><span>PATH ACTIVITY</span><small id="activityCount">0 条记录</small></div><div class="update-list" id="updateList"></div></div>
+        </div>
+      </section>
+
+      <section class="growth-report page-section" id="growth">
+        <div class="growth-head"><div><span class="kicker">LIVING REPORT</span><h2>这份报告，会和你一起生长</h2><p>它只认可真实完成的行动和留下的证据。</p></div><div class="growth-score"><strong id="growthScore">0</strong><span>/ 100<br>路径完成度</span></div></div>
+        <div class="growth-path" id="growthTree"></div>
+        <div class="growth-foot"><span id="growthHint">完成第一个行动，点亮路径的下一站。</span><button class="text-button" id="growthExport" type="button">导出成长报告 <span>↓</span></button></div>
+      </section>
+    </section>
+  </main>
+
+  <div class="companion" id="companion" aria-live="polite"><div class="companion-orb"><span>·ᴗ·</span><i></i></div><div><strong>小径</strong><p id="companionText">我会陪你把下一步变具体。</p></div><button id="closeCompanion" type="button" aria-label="隐藏陪伴提示">×</button></div>
+  <div class="ai-progress" id="aiProgress" aria-live="polite"><div class="ai-progress-top"><span><i></i> PATHWISE AI</span><b id="aiProgressLabel">读取画像</b><strong id="aiProgressPercent">8%</strong></div><div class="ai-progress-track"><em id="aiProgressFill"></em></div><div class="ai-progress-steps"><span>画像</span><span>岗位</span><span>差距</span><span>路径</span></div></div>
+
+  <div class="drawer-backdrop" id="drawer"><aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="drawerTitle"><button class="close" id="closeDrawer" aria-label="关闭">×</button><span class="kicker" id="drawerKicker">ACTION GUIDE</span><h2 id="drawerTitle">行动指导</h2><p id="drawerIntro"></p><div id="drawerContent"></div><button class="primary drawer-action" id="drawerDone" type="button">关闭指导</button></aside></div>
+
+  <div class="modal-backdrop" id="profileModal"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="profileModalTitle"><button class="close modal-close" aria-label="关闭">×</button><span class="kicker">PROFILE INPUT</span><h2 id="profileModalTitle">更新你的职业画像</h2><p>基本信息负责定方向，之后的项目、面试与成果随时从“进展与证据链”补充。</p><button class="resume-entry" id="modalResumeBtn" type="button"><span>已有简历？</span><strong>上传 PDF，让它成为第一份证据 <b>→</b></strong></button><form id="profileForm"><div class="form-grid"><label>当前阶段<select name="stage"><option>本科大一</option><option>本科大二</option><option>本科大三上</option><option>本科大三下</option><option>本科大四</option><option>研一</option><option>研二</option><option>研三</option><option>已毕业</option></select></label><label>学校层次<select name="school"><option>985</option><option>211</option><option>双一流</option><option>一本</option><option>其他</option></select></label><label>专业<input name="major" placeholder="例如：信息安全"></label><label>目标岗位<input name="target" placeholder="例如：软件安全工程师"></label></div><label>已有经历<textarea name="experience" rows="5" placeholder="技能、项目、实习、比赛或其他可验证经历"></textarea></label><button class="primary full" type="submit">重新生成完整路径 <span>↗</span></button></form></div></div>
+
+  <div class="modal-backdrop" id="outcomeModal"><div class="modal outcome-modal" role="dialog" aria-modal="true"><button class="close modal-close" aria-label="关闭">×</button><span class="kicker">ACTION OUTCOME</span><h2>留下这一步的成果</h2><p id="outcomePrompt">成果会进入证据链，并用于重新调整后续路径。</p><form id="outcomeForm"><label>成果总结<textarea id="outcomeText" rows="4" required placeholder="我完成了什么？结果、数据或反馈是什么？"></textarea></label><label>成果链接（可选）<input id="outcomeLink" type="url" placeholder="GitHub、作品集或文档链接"></label><div class="modal-actions"><button class="text-button outcome-cancel" type="button">稍后记录</button><button class="primary" type="submit">保存并更新路径</button></div></form></div></div>
+
+  <div class="modal-backdrop" id="resetModal"><div class="modal reset-modal" role="dialog" aria-modal="true"><button class="close modal-close" aria-label="关闭">×</button><span class="kicker">RESET PATH</span><h2>重新开始这条路径？</h2><p>将清除当前浏览器中的画像、行动、进展与证据。服务器配置和模型 Key 不受影响。</p><div class="modal-actions"><button class="text-button reset-cancel" type="button">保留当前数据</button><button class="danger reset-confirm" type="button">确认全部重置</button></div></div></div>
+
+  <div class="toast" id="toast" role="status"></div>
+  <script src="career.js"></script>
+</body>
+</html>

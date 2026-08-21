@@ -64,7 +64,7 @@ Cloudflare Pages Functions 位于 `functions/api/`，线上 Key 只存在于 Clo
 
 - `career.html`：核心产品界面
 - `career.js`：状态、交互、AI 请求与本地留存
-- `career.css` / `premium.css` / `profile.css`：界面系统
+- `redesign.css`：完整的响应式界面系统
 - `server.py`：本地 Python API、模型代理和材料解析
 - `functions/api/`：Cloudflare Pages Functions
 - `package.json`：Cloudflare PDF 解析依赖

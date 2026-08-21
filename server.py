@@ -111,7 +111,7 @@ def make_plan(profile):
     model_profile=compact_profile(profile)
     prompt=f'你是可信的应届生职业规划产品。根据用户画像、最近进展和证据材料，重新判断现在可投和毕业可达岗位。材料不是存档：必须说明它确认了什么能力、暴露了什么缺口，以及计划哪些阶段需要调整。最近进展中的明确事实优先级高于旧画像：如果用户说目标已转向某岗位，必须把 profile、currentRoles、graduationRoles、stages 全部改成新目标。面试失败要转成具体复盘缺口，而不是继续推荐旧方向。回答精炼，每个字段只保留对求职决策有用的信息。{schema}\n用户画像：{json.dumps(model_profile,ensure_ascii=False)}'
     try:
-        payload={'model':model,'messages':[{'role':'user','content':prompt}],'temperature':0.2,'max_tokens':2200,'stream':True}
+        payload={'model':model,'messages':[{'role':'user','content':prompt}],'temperature':0.2,'max_tokens':1600,'enable_thinking':False,'stream':False}
         req=Request(base.rstrip('/')+'/chat/completions',data=json.dumps(payload).encode(),headers={'Authorization':'Bearer '+key,'Content-Type':'application/json'})
         if os.environ.get('AI_TRANSPORT','curl').lower() == 'curl':
             raw=curl_chat(base,key,payload,max(180.0,min(float(os.environ.get('AI_TIMEOUT',DEFAULT_TIMEOUT)),240.0)))
@@ -165,7 +165,7 @@ def make_action_guide(payload):
         return local_action_guide(action,profile,'未配置 API Key')
     schema='''只返回 JSON，不要 Markdown。结构必须为：{"title":"string","why":"string","steps":["string"],"resources":["string"],"estimatedTime":"string","doneWhen":"string","evidence":"string"}。steps 必须是 3-5 个具体动作；不得虚构链接、招聘信息或用户经历。'''
     prompt=f'''你是应届生职业行动教练。请只深化一个行动项，不要重新生成整份职业规划。指导必须结合用户阶段、目标岗位、已有经历、最近进展和证据；写到用户现在就能照着做的程度。{schema}\n行动项：{action}\n用户画像：{json.dumps(profile,ensure_ascii=False)}'''
-    request_payload={'model':model,'messages':[{'role':'user','content':prompt}],'temperature':0.2,'max_tokens':900,'stream':False}
+    request_payload={'model':model,'messages':[{'role':'user','content':prompt}],'temperature':0.2,'max_tokens':900,'enable_thinking':False,'stream':False}
     try:
         raw=curl_chat(base,key,request_payload,max(60.0,min(float(os.environ.get('ACTION_GUIDE_TIMEOUT',90)),120.0)))
         content=raw['choices'][0]['message']['content']; fence=chr(96)*3

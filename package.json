@@ -5,7 +5,7 @@
   "description": "Evidence-driven AI career planning companion",
   "scripts": {
     "build": "node -e \"console.log('Pathwise static build ready')\"",
-    "deploy": "wrangler pages deploy . --project-name pathwise"
+    "deploy": "wrangler pages deploy . --project-name pathwise-web"
   },
   "dependencies": {
     "unpdf": "^0.12.1"

@@ -1,107 +1,611 @@
-const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
-const styleLink=document.createElement('link');styleLink.rel='stylesheet';styleLink.href='profile.css';document.head.appendChild(styleLink);
-const premiumLink=document.createElement('link');premiumLink.rel='stylesheet';premiumLink.href='premium.css';document.head.appendChild(premiumLink);
-const redesignLink=document.createElement('link');redesignLink.rel='stylesheet';redesignLink.href='redesign.css';document.head.appendChild(redesignLink);
-const pathwiseLocalHost=location.hostname==='127.0.0.1'||location.hostname==='localhost';
-const pathwiseApiOrigin=location.protocol==='file:'?'http://127.0.0.1:8787':(pathwiseLocalHost&&location.port!=='8787'?'http://127.0.0.1:8787':'');
-const pathwiseNativeFetch=window.fetch.bind(window);window.fetch=(input,init)=>{const raw=String(input);const url=raw.startsWith('/api/')?pathwiseApiOrigin+raw:raw;return pathwiseNativeFetch(url,init)};
-function demoPlan(p={}){const target=p.target||'AI 产品经理',stage=p.stage||'本科大三下',school=p.school||'211',major=p.major||'计算机科学与技术';return {source:'demo',status:'demo',profile:`${stage} · ${school} ${major}`,summary:`${p.experience||'有 2 个 AI 项目，会 Python，暂无产品实习'} · 目标：${target}` ,currentRoles:[{title:`${target}实习生`,match:78,reason:'当前背景与岗位的技术理解要求有重合。'}],graduationRoles:[{title:`${target}（应用方向）`,match:64,reason:'补齐真实业务和结果证据后，毕业时可重点投递。'}],gaps:['真实业务实习','可量化项目结果','产品指标意识'],actions:['拆解 10 个目标岗位 JD','把一个项目补成用户与指标案例','准备一次目标岗位项目深挖'],actionGuides:[{title:'拆解 10 个目标岗位 JD',why:'先知道目标岗位真正要求什么，避免盲目投递。',steps:['收集 10 个近 30 天发布的 JD','标注重复出现的能力和产出','把最高频的 3 项写进简历'],doneWhen:'完成一张岗位能力对照表'},{title:'把一个项目补成用户与指标案例',why:'招聘方需要看到你能从问题走到结果。',steps:['写清目标用户和原始问题','选一个主指标记录前后变化','补上一次取舍和失败复盘'],doneWhen:'形成一页可讲 3 分钟的项目案例'},{title:'准备一次目标岗位项目深挖',why:'项目深挖是验证产品思考和技术理解的高频环节。',steps:['准备背景、目标、方案、指标四句话','为 AI 失败、成本和延迟准备答案','录音完成一次 15 分钟自问自答'],doneWhen:'能在 3 分钟内讲清项目并回答追问'}],stages:[{title:`拿到第一段 ${target} 实习`,why:'获得真实用户、需求和协作经验。',tasks:['筛选有真实用户的团队','完成 10 个高质量投递','复盘每次面试反馈'],doneWhen:'拿到 offer 或完成 10 次有效面试'},{title:`补齐 ${target} 的能力证据`,why:'把项目从 Demo 变成可验证的业务案例。',tasks:['定义一个主指标','记录迭代前后变化','写一页复盘'],doneWhen:'有一份可讲清目标、取舍、结果的案例'},{title:`冲刺毕业 ${target} 岗`,why:'用前两阶段证据匹配毕业岗位。',tasks:['整理作品集','每周模拟一次面试','针对 JD 补行业知识'],doneWhen:'完成目标岗位的成套投递'}]}}
-const progress=document.createElement('div');progress.className='ai-progress';progress.innerHTML='<div class="ai-progress-top"><span><i></i> PATHWISE AI</span><b id="aiProgressLabel">准备分析</b><strong id="aiProgressPercent">0%</strong></div><div class="ai-progress-track"><em id="aiProgressFill"></em></div><div class="ai-progress-steps"><span data-progress-step="1">读取画像</span><span data-progress-step="2">对比岗位</span><span data-progress-step="3">生成路径</span><span data-progress-step="4">整理指导</span></div>';document.body.appendChild(progress);let progressTimer;function startProgress(){clearInterval(progressTimer);progress.classList.add('show');let n=8;const labels=['读取你的画像','提取经历证据','对比目标岗位','拆解能力缺口','生成行动路径','整理每一步指导'];const tick=()=>{n=Math.min(92,n+Math.max(1,(92-n)*.07));$('#aiProgressPercent').textContent=Math.round(n)+'%';$('#aiProgressFill').style.width=n+'%';$('#aiProgressLabel').textContent=labels[Math.min(labels.length-1,Math.floor(n/17))];$$('[data-progress-step]').forEach((s,i)=>s.classList.toggle('active',n>(i+1)*20))};progressTimer=setInterval(tick,420);tick()}function finishProgress(){clearInterval(progressTimer);$('#aiProgressPercent').textContent='100%';$('#aiProgressFill').style.width='100%';$('#aiProgressLabel').textContent='路径已更新';setTimeout(()=>progress.classList.remove('show'),900)}
-const realFetch=window.fetch.bind(window);window.fetch=(input,init)=>{const api=String(input).includes('/api/plan');if(api)startProgress();let body=init?.body;try{const p=JSON.parse(body||'{}');const saved=JSON.parse(localStorage.getItem('pathwiseProfile')||'null');if(saved?.updates?.length){p.updates=[...new Set([...(p.updates||[]),...saved.updates])];init={...init,body:JSON.stringify(p)}}}catch(_){}const fallbackResponse=()=>{if(String(input).includes('/api/health'))return new Response(JSON.stringify({configured:false,model:'demo mode'}),{status:200,headers:{'Content-Type':'application/json'}});if(api){let profile={};try{profile=JSON.parse(init?.body||'{}')}catch(_){}return new Response(JSON.stringify(demoPlan(profile)),{status:200,headers:{'Content-Type':'application/json'}})}return null};return realFetch(input,init).then(response=>{if(api)finishProgress();const fallback=fallbackResponse();return !response.ok&&fallback?fallback:response}).catch(error=>{if(api)finishProgress();const fallback=fallbackResponse();if(fallback)return fallback;throw error})};
-const heroVisual=document.createElement('div');heroVisual.className='hero-visual';heroVisual.innerHTML='<img src="https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&fit=crop&w=1200&q=88" alt="年轻人在真实团队中讨论职业项目"><div class="hero-fallback-art" aria-hidden="true"><span class="fallback-grid"></span><b>PATH<br>WISE</b><i>career map / live</i></div><div class="hero-signal"><span class="signal-dot"></span><div><b>PATH ACTIVE</b><small>AI career companion</small></div></div><div class="hero-caption"><span>01</span><strong>每一份真实经历，都让下一步更清晰。</strong></div>';const heroImg=heroVisual.querySelector('img');heroImg.addEventListener('error',()=>heroVisual.classList.add('fallback'));document.querySelector('.top').appendChild(heroVisual);
-const companion=document.createElement('div');companion.className='companion';companion.innerHTML='<div class="companion-orb"><span class="companion-face">•ᴗ•</span><i></i></div><div class="companion-copy"><strong>小径</strong><span id="companionText">我会陪你把下一步变具体。</span></div><button class="companion-close" aria-label="隐藏陪伴卡">×</button>';document.body.appendChild(companion);
-const workspaceTools=document.createElement('div');workspaceTools.className='workspace-tools';workspaceTools.innerHTML='<span class="sync-pulse"><i></i> 本地数据已保存</span><button id="themeToggle" type="button" aria-label="切换界面风格">◐</button>';document.querySelector('.top').appendChild(workspaceTools);if(localStorage.getItem('pathwiseTheme')==='night')document.body.classList.add('night');$('#themeToggle').onclick=()=>{document.body.classList.toggle('night');localStorage.setItem('pathwiseTheme',document.body.classList.contains('night')?'night':'day')};
-const companionText=companion.querySelector('#companionText');function companionSay(text){if(/没有可用模型 Key|还没配置 AI Key|没有读取到 API Key/.test(text))text='服务已连接，点击生成规划验证 AI。';companionText.textContent=text;companion.classList.remove('pulse');void companion.offsetWidth;companion.classList.add('pulse')}
-companion.querySelector('.companion-close').addEventListener('click',()=>{companion.classList.add('hidden');showToast('陪伴卡已隐藏，可刷新页面恢复')});
-const toastEl=$('#toast');
-function showToast(message){toastEl.textContent=message;toastEl.classList.add('show');setTimeout(()=>toastEl.classList.remove('show'),2400)}
-fetch('/api/health').then(r=>r.json()).then(s=>companionSay(s.configured?`AI 已就绪 · ${s.model}`:'还没配置 AI Key，我也可以先用本地规划。')).catch(()=>companionSay('先启动 Python 服务，我就能连接职业规划引擎。'));
+const $ = (selector, root = document) => root.querySelector(selector);
+const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 
-const guides={now:['ROLE GUIDE / NOW','当前可投岗位指导',['优先投递 AI 应用、技术产品、解决方案和模型评测相关实习。','把项目改成“用户问题 → 产品判断 → 结果”，补上用户数、完成率或效率变化。','本周拆解 10 个 JD，并完成一次项目深挖模拟。']],grad:['ROLE GUIDE / GRADUATION','毕业可达岗位路径',['至少获得一段相关实习、一个真实用户项目和一次完整复盘。','记录用户、使用频率、转化或完成率，以及你根据数据做过的改变。','实习沉淀案例，大四上整理作品集并开始校招投递。']],stretch:['GAP ANALYSIS','当前差距分析',['缺少真实业务、复杂协作、上线指标和结果负责的证据。','继续堆没有用户的 Demo 无法填补核心缺口。','先争取相邻岗位实习，用真实业务结果换取下一轮竞争资格。']],step1:['STAGE 01 / ACTIONS','拿到第一段目标岗位实习',['筛选有真实用户、能接触需求和数据的团队。','准备项目深挖：用户是谁、为什么用 AI、失败时怎么办、指标怎么定。','完成标准：拿到 offer，或完成 10 次有效面试并根据反馈迭代。']],step2:['STAGE 02 / EVIDENCE','补齐能力证据',['案例结构：用户与问题 → 方案取舍 → AI 失败处理 → 结果 → 复盘。','建议跟踪完成率、人工节省时长、留存、错误率或调用成本。']],step3:['STAGE 03 / RECRUITING','毕业投递准备',['提前 2 个月整理作品集，每周模拟一次产品题。','讲清业务目标、指标取舍和失败复盘，不要只讲模型原理。']]};
-function escapeHtml(value){return String(value||'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]))}
-function openGuide(key){const g=guides[key]||guides.step1;activeDrawerTask=null;$('#drawerDone').textContent='关闭指导';$('#drawerKicker').textContent=g[0];$('#drawerTitle').textContent=g[1];$('#drawerIntro').textContent='这一步要做什么、为什么做，以及做到什么程度。';$('#drawerContent').innerHTML=g[2].map((x,i)=>`<div class="guide-block"><strong>0${i+1}</strong><p>${escapeHtml(x)}</p></div>`).join('');$('#drawer').classList.add('open')}
-function enhanceActionControls(){
-  $$('.task').forEach(task=>{if(task.parentElement?.classList.contains('action-item'))return;const wrap=document.createElement('div');wrap.className='action-item';task.parentNode.insertBefore(wrap,task);wrap.appendChild(task);const detail=document.createElement('button');detail.type='button';detail.className='task-guide-btn';detail.textContent='指导 →';detail.dataset.actionTitle=task.dataset.task;detail.setAttribute('aria-label','查看“'+task.dataset.task+'”的详细指导');wrap.appendChild(detail);task.textContent='○ '+task.dataset.task})
-}
-enhanceActionControls();
-let activeDrawerTask=null;
-function renderDetailedGuide(guide){const steps=(guide.steps||[]).map((step,i)=>`<li><b>${i+1}</b><span>${escapeHtml(step)}</span></li>`).join('');const resources=(guide.resources||[]).map(item=>`<span>${escapeHtml(item)}</span>`).join('');$('#drawerKicker').textContent=guide.source==='ai'?'AI ACTION GUIDE':'ACTION GUIDE';$('#drawerTitle').textContent=guide.title;$('#drawerIntro').textContent=guide.why;$('#drawerContent').innerHTML=`<div class="guide-detail"><h3>照着做</h3><ol>${steps}</ol></div><div class="guide-meta"><div><small>预计耗时</small><strong>${escapeHtml(guide.estimatedTime)}</strong></div><div><small>完成标准</small><strong>${escapeHtml(guide.doneWhen)}</strong></div></div>${resources?`<div class="guide-resources"><small>准备这些</small>${resources}</div>`:''}<div class="guide-evidence"><small>完成后留下什么</small><p>${escapeHtml(guide.evidence)}</p></div>`}
-function browserFallbackGuide(action,base){return {title:action,why:base?.[2]?.[0]||'把这项行动变成一份能被验证、能在面试中讲清楚的成果。',steps:base?.[2]?.slice(1,5)||['明确这项行动的交付结果','拆成三个小步骤并完成第一步','整理成果和一次复盘'],resources:['目标岗位 JD','个人经历材料','复盘模板'],estimatedTime:'2-4 小时，可分两次完成',doneWhen:base?.[2]?.find(x=>String(x).includes('完成标准'))?.replace('完成标准：','')||'形成一份可查看、可复述的成果',evidence:'上传成果文档、截图、链接或复盘文字，加入进展与证据链。',source:'local'}}
-async function openActionGuide(button){
-  const action=button.dataset.actionTitle||button.closest('.action-item')?.querySelector('.task')?.dataset.task||'当前行动';activeDrawerTask=button.closest('.action-item')?.querySelector('.task')||null;$('#drawerDone').textContent=activeDrawerTask?.classList.contains('done')?'记录成果':'完成并记录成果';$('#drawer').classList.add('open');$('#drawerKicker').textContent='PERSONAL ACTION GUIDE';$('#drawerTitle').textContent=action;$('#drawerIntro').textContent='正在结合你的画像与证据，把这一项拆成可以直接执行的步骤。';const baseKey=button.dataset.guide;const base=guides[baseKey];$('#drawerContent').innerHTML=base?base[2].map((x,i)=>`<div class="guide-block"><strong>0${i+1}</strong><p>${escapeHtml(x)}</p></div>`).join(''):'<div class="guide-loading"><i></i><span>AI 正在生成详细指导…</span></div>';
-  let cache={};try{cache=JSON.parse(localStorage.getItem('pathwiseActionGuides')||'{}')}catch(_){}if(cache[action]){renderDetailedGuide(cache[action]);return}
-  button.classList.add('loading');try{const r=await fetch('/api/action-guide',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,profile:savedProfile})});if(!r.ok)throw Error('HTTP '+r.status);const guide=await r.json();cache[action]=guide;localStorage.setItem('pathwiseActionGuides',JSON.stringify(cache));renderDetailedGuide(guide)}catch(error){console.error(error);renderDetailedGuide(browserFallbackGuide(action,base));showToast('已显示本地指导；重启服务后可用 AI 深化')}finally{button.classList.remove('loading')}
-}
-document.addEventListener('click',e=>{const detail=e.target.closest('.task-guide-btn');if(detail){openActionGuide(detail);return}const task=e.target.closest('.task');if(task){const completed=!task.classList.contains('done');task.classList.toggle('done');task.textContent=(task.classList.contains('done')?'✓ ':'○ ')+task.dataset.task;showToast(completed?'行动已完成':'已恢复为待完成');companionSay(completed?'这一步完成了。把成果放进证据链，路径会继续生长。':'没关系，调整节奏也是规划的一部分。');if(completed)setTimeout(()=>openOutcome(task.dataset.task),120);return}const guide=e.target.closest('[data-guide]');if(guide)openGuide(guide.dataset.guide)});
-const outcomeModal=document.createElement('div');outcomeModal.className='profile-backdrop outcome-backdrop';outcomeModal.innerHTML='<div class="profile-modal outcome-modal" role="dialog" aria-modal="true"><button class="close outcome-close" aria-label="关闭">×</button><span class="kicker">PROGRESS EVIDENCE</span><h2>留下这一步的成果</h2><p id="outcomePrompt">用一句话记录你完成了什么，之后它会进入进展与证据链。</p><form id="outcomeForm"><label>成果总结<textarea id="outcomeText" rows="3" required placeholder="例如：整理了 10 个软件安全岗位 JD，归纳出 4 项高频能力"></textarea></label><label>成果链接（可选）<input id="outcomeLink" type="url" placeholder="https://github.com/... 或作品集链接"></label><div class="outcome-actions"><button type="button" class="outcome-cancel">稍后再记</button><button type="submit" class="primary">保存成果</button></div></form></div>';document.body.appendChild(outcomeModal);
-function openOutcome(task){outcomeModal.dataset.task=task;$('#outcomePrompt').textContent='“'+task+'”已完成。用一句话记录成果，之后它会进入进展与证据链。';$('#outcomeText').value='';$('#outcomeLink').value='';outcomeModal.classList.add('open');setTimeout(()=>$('#outcomeText').focus(),30)}
-outcomeModal.querySelector('.outcome-close').onclick=outcomeModal.querySelector('.outcome-cancel').onclick=()=>outcomeModal.classList.remove('open');outcomeModal.addEventListener('click',e=>{if(e.target===outcomeModal)outcomeModal.classList.remove('open')});outcomeModal.querySelector('#outcomeForm').addEventListener('submit',async e=>{e.preventDefault();const text=$('#outcomeText').value.trim(),link=$('#outcomeLink').value.trim(),task=outcomeModal.dataset.task;if(!text)return;const note=link?`${task}：${text}（成果链接：${link}）`:`${task}：${text}`;savedProfile.updates=[...(savedProfile.updates||[]),note];localStorage.setItem('pathwiseProfile',JSON.stringify(savedProfile));paintUpdates();outcomeModal.classList.remove('open');$('#drawer').classList.remove('open');showToast('成果已加入进展与证据链，正在更新路径…');companionSay('我记下了这条成果。它会成为下一次规划判断的证据。');try{const r=await fetch('/api/plan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(savedProfile)});if(r.ok){const data=await r.json();$('.profile-main h2').textContent=data.profile;$('.profile-main p').textContent=data.summary;renderPlan(data,data.source!=='ai')}}catch(error){console.warn('Outcome plan refresh failed',error)}});
-$('#closeDrawer').addEventListener('click',()=>$('#drawer').classList.remove('open'));$('#drawer').addEventListener('click',e=>{if(e.target.id==='drawer')$('#drawer').classList.remove('open')});$('#drawerDone').addEventListener('click',()=>{if(activeDrawerTask){if(!activeDrawerTask.classList.contains('done')){activeDrawerTask.classList.add('done');activeDrawerTask.textContent='✓ '+activeDrawerTask.dataset.task;localStorage.setItem('pathwiseTasks',JSON.stringify($$('.task.done').map(t=>t.dataset.task)));showToast('行动已完成');openOutcome(activeDrawerTask.dataset.task)}else{openOutcome(activeDrawerTask.dataset.task)}}else{$('#drawer').classList.remove('open')}});$('#compareBtn').addEventListener('click',()=>{document.querySelector('.range-grid').scrollIntoView({behavior:'smooth'});companionSay('先比较“现在可投”和“毕业可达”，别急着只看最远的目标。')});
+const STORAGE = {
+  profile: 'pathwiseProfile',
+  plan: 'pathwisePlan',
+  tasks: 'pathwiseTasks',
+  guides: 'pathwiseActionGuides',
+  theme: 'pathwiseTheme'
+};
 
-function renderPlan(data, fallback){
-  try{localStorage.setItem('pathwisePlan',JSON.stringify(data))}catch(_){ }
-  const current=data.currentRoles?.[0], graduate=data.graduationRoles?.[0], cards=$$('.range-card');
-  if(current){cards[0].querySelector('h3').textContent=current.title||'当前匹配岗位';if(current.match)cards[0].querySelector('.range-head span:last-child').textContent='匹配度 '+current.match;cards[0].querySelector('.match-bar i').style.width=(current.match||60)+'%';cards[0].querySelector('p').textContent=current.reason||'当前经历与该岗位的能力要求有直接重合。'}
-  if(graduate){cards[1].querySelector('h3').textContent=graduate.title||'毕业可达岗位';if(graduate.match)cards[1].querySelector('.range-head span:last-child').textContent='匹配度 '+graduate.match;cards[1].querySelector('.match-bar i').style.width=(graduate.match||55)+'%';cards[1].querySelector('p').textContent=graduate.reason||'补齐关键经历后，毕业时可以重点投递。'}
-  const target=(data.graduationRoles?.[0]?.title||data.currentRoles?.[0]?.title||data.profile||'目标岗位').replace(/（.*?）|实习生|应用方向/g,'').trim();
-  const stretchMatch=Math.max(28,Math.min(58,Number(graduate?.match||45)-18));
-  cards[2].querySelector('h3').textContent='头部大厂 '+target;
-  cards[2].querySelector('.range-head span:last-child').textContent='匹配度 '+stretchMatch;
-  cards[2].querySelector('.match-bar i').style.width=stretchMatch+'%';
-  cards[2].querySelector('p').textContent=data.gaps?.length?'当前缺口：'+data.gaps.slice(0,3).join('、')+'。':'需要更强的业务结果、复杂协作和面试证据。';
-  if(data.actions?.length)$$('.task').forEach((b,i)=>{if(data.actions[i]){b.dataset.task=data.actions[i];b.classList.remove('done');b.textContent='○ '+data.actions[i];const detail=b.closest('.action-item')?.querySelector('.task-guide-btn');if(detail){detail.dataset.actionTitle=data.actions[i];detail.setAttribute('aria-label','查看“'+data.actions[i]+'”的详细指导')}}});
-  if(data.actionGuides?.length)data.actionGuides.forEach((g,i)=>{guides['action'+i]=['ACTION GUIDE',g.title,[g.why,...(g.steps||[]),`完成标准：${g.doneWhen||'完成这项行动'}`]];const detail=$$('.task-guide-btn')[i];if(detail)detail.dataset.guide='action'+i});
-  if(data.stages?.length)$$('.step').forEach((step,i)=>{const s=data.stages[i];if(!s)return;step.querySelector('h3').textContent=s.title;step.querySelector('p').textContent=s.why;const guide=step.querySelector('.guide-link');guide.dataset.guide='dynamic'+i;guides['dynamic'+i]=['STAGE '+String(i+1).padStart(2,'0'),s.title,[...(s.tasks||[]),`完成标准：${s.doneWhen||'完成本阶段关键任务'}`]]});
-  const shortSummary=String(data.summary||'').replace(/\s+/g,' ').trim();
-  if(shortSummary) $('.profile-main p').textContent=shortSummary.length>110?shortSummary.slice(0,108)+'…':shortSummary;
-  const stats=$$('.profile-stats strong');const targetName=(data.graduationRoles?.[0]?.title||data.currentRoles?.[0]?.title||'目标岗位').replace(/（.*?）|实习生|应用方向/g,'').trim();if(stats[1])stats[1].innerHTML=escapeHtml(targetName.slice(0,12));if(stats[2]){const evidence=(savedProfile.evidence||[]).length,done=$$('.task.done').length;stats[2].innerHTML=Math.min(99,Math.max(35,Math.round(45+evidence*8+done*6)))+'<span>%</span>'}const badge=$('.side-link:nth-of-type(3) span:last-child');if(badge)badge.textContent=$$('.task:not(.done)').length;
-  if(fallback){showToast('AI 暂时不可用，已使用本地规划');companionSay(data.reason?'线上 AI 暂不可用：'+data.reason:'我先用已有规则帮你稳住路径，AI 恢复后可以再生成一次。')}else{showToast('AI 已更新整条职业路径');companionSay('路径更新好了。先做第一阶段，别同时打开太多支线。')}
+const DEFAULT_PROFILE = {
+  stage: '本科大三下',
+  school: '211',
+  major: '信息安全',
+  target: '软件安全工程师',
+  experience: '掌握 Python，有 2 个 AI 项目经验',
+  updates: [],
+  evidence: []
+};
+
+const isLocalHost = location.hostname === '127.0.0.1' || location.hostname === 'localhost';
+const apiOrigin = location.protocol === 'file:' || (isLocalHost && location.port !== '8787') ? 'http://127.0.0.1:8787' : '';
+const api = path => `${apiOrigin}${path}`;
+
+function readJSON(key, fallback) {
+  try { return JSON.parse(localStorage.getItem(key)) ?? fallback; }
+  catch { return fallback; }
 }
-// The form listener below is the single profile-edit entry point.
-// Enhance the static shell with real navigation and a form-based profile editor.
-const sideLinks=$$('.side-link');sideLinks.forEach((b,i)=>b.addEventListener('click',()=>{sideLinks.forEach(x=>x.classList.remove('active'));b.classList.add('active');if(i===1){document.querySelector('.range-grid').scrollIntoView({behavior:'smooth'});showToast('岗位地图已定位到你的岗位范围')}if(i===2){document.querySelector('.journey').scrollIntoView({behavior:'smooth'});showToast('行动清单已定位到下一步')}}));
-const resetButton=document.createElement('button');resetButton.type='button';resetButton.className='reset-path';resetButton.innerHTML='<span aria-hidden="true">↻</span> 重置我的路径';document.querySelector('.side-note').before(resetButton);
-const resetModal=document.createElement('div');resetModal.className='profile-backdrop reset-backdrop';resetModal.innerHTML='<div class="profile-modal reset-modal" role="dialog" aria-modal="true" aria-labelledby="resetTitle"><button class="close reset-close" aria-label="关闭">×</button><span class="kicker">RESET PATH</span><h2 id="resetTitle">重新开始这条路径？</h2><p>这会清除当前画像、岗位规划、进展证据、行动完成状态和成长报告。服务器配置与 API Key 不会受到影响。</p><div class="reset-actions"><button type="button" class="reset-cancel">保留当前数据</button><button type="button" class="reset-confirm">确认全部重置</button></div></div>';document.body.appendChild(resetModal);resetButton.onclick=()=>resetModal.classList.add('open');resetModal.querySelector('.reset-close').onclick=resetModal.querySelector('.reset-cancel').onclick=()=>resetModal.classList.remove('open');resetModal.addEventListener('click',e=>{if(e.target===resetModal)resetModal.classList.remove('open')});resetModal.querySelector('.reset-confirm').onclick=()=>{Object.keys(localStorage).filter(key=>key.startsWith('pathwise')).forEach(key=>localStorage.removeItem(key));location.reload()};
-const modal=document.createElement('div');modal.className='profile-backdrop';modal.innerHTML='<div class="profile-modal"><button class="close profile-close">×</button><span class="kicker">PROFILE INPUT</span><h2>编辑你的职业画像</h2><p>告诉我你现在的阶段和经历，系统会重新规划毕业去向。</p><form id="profileForm"><div class="form-grid"><label>当前阶段<select name="stage"><option>本科大一</option><option>本科大二</option><option selected>本科大三下</option><option>本科大四</option><option>研一</option><option>研二</option></select></label><label>学校层次<select name="school"><option>985</option><option selected>211</option><option>双非一本</option><option>其他</option></select></label><label>专业<input name="major" value="计算机科学与技术"></label><label>目标岗位<input name="target" value="AI 产品经理"></label></div><label>已有经历<textarea name="experience" rows="4">做过 2 个 AI 项目，会 Python，暂无产品实习</textarea></label><button class="primary full" type="submit">生成我的毕业去向</button></form></div>';document.body.appendChild(modal);$('#editProfile').onclick=()=>modal.classList.add('open');modal.querySelector('.profile-close').onclick=()=>modal.classList.remove('open');modal.addEventListener('click',e=>{if(e.target===modal)modal.classList.remove('open')});modal.querySelector('form').addEventListener('submit',async e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target));modal.classList.remove('open');showToast('正在生成完整职业路径…');try{const r=await fetch('/api/plan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});if(!r.ok)throw Error('HTTP '+r.status);const data=await r.json();$('.profile-main h2').textContent=data.profile;$('.profile-main p').textContent=data.summary;renderPlan(data,data.source!=='ai')}catch(err){console.error(err);showToast('请求失败，请查看 Python 终端')}});
-const updatePanel=document.createElement('section');updatePanel.className='update-panel panel';updatePanel.innerHTML='<div class="update-head"><div><span class="kicker">LIVE PROFILE · EVIDENCE CHAIN</span><h2>进展与证据链</h2><p>记录发生了什么；简历、复盘和项目材料会作为证据附在同一条路径上。</p></div><span class="live-mark"><i></i> 持续更新</span></div><div class="update-compose"><input id="updateInput" placeholder="比如：完成了一次软件安全面试，发现自己缺少代码审计案例"><button id="addUpdate">记录进展</button></div><div class="quick-updates"><button data-update="完成了一次目标岗位面试">面试反馈</button><button data-update="完成一个可展示项目">项目完成</button><button data-update="开始第一段相关实习">获得实习</button><button data-update="收到一次投递拒绝">投递结果</button></div><div class="update-list" id="updateList"></div>';document.querySelector('.profile-bar').after(updatePanel);
-// Progress is a timeline below the role assessment, not a second hero section.
-document.querySelector('.range-grid').after(updatePanel);
-const evidencePanel=document.createElement('section');evidencePanel.className='evidence-panel panel';evidencePanel.innerHTML='<div class="evidence-form"><select id="evidenceType"><option>面试复盘</option><option>项目进展</option><option>简历更新</option><option>岗位反馈</option></select><textarea id="evidenceInput" rows="3" placeholder="补充一条证据：粘贴面试复盘、项目结果或岗位反馈"></textarea><button id="addEvidence">加入证据链并调整计划</button></div><label class="upload-evidence"><input id="evidenceFile" type="file" accept=".txt,.md,.pdf,.docx,.png,.jpg,.jpeg,.mp3,.m4a,.wav,.webm,.mp4"><span>＋ 上传证据材料</span><small>文件会先在本地解析；音频需配置转写服务</small></label><div id="evidenceList" class="evidence-list"></div>';updatePanel.after(evidencePanel);
-let savedProfile=JSON.parse(localStorage.getItem('pathwiseProfile')||'null')||{stage:'本科大三下',school:'211',major:'信息安全',target:'软件安全工程师',experience:'掌握 Python，有 2 个 AI 项目经验',updates:[],evidence:[]};
-// 旧版本曾把证据原文同时写入“最近进展”，首次打开时迁移掉这些重复记录。
-if(Array.isArray(savedProfile.updates)){
-  const evidence=savedProfile.evidence||[];
-  savedProfile.updates=[...new Set(savedProfile.updates.filter(u=>{
-    const t=String(u||'').trim();
-    if(!t||(/已上传/.test(t)&&/解析完成/.test(t))) return false;
-    return !evidence.some(e=>{const c=String(e.content||'').trim();const type=String(e.type||'').trim();const file=String(e.filename||'').trim();return (c&&t.includes(c.slice(0,Math.min(80,c.length))))||(type&&c&&t===type+'：'+c)||(file&&t.includes(file))});
-  }))];
-  localStorage.setItem('pathwiseProfile',JSON.stringify(savedProfile));
+
+function writeJSON(key, value) {
+  localStorage.setItem(key, JSON.stringify(value));
 }
-function evidenceDuplicates(update){const text=String(update||'').trim();return (savedProfile.evidence||[]).some(e=>{const content=String(e.content||'').trim();const type=String(e.type||'').trim();const filename=String(e.filename||'').trim();return (content&&text.includes(content.slice(0,Math.min(80,content.length))))||(type&&text===type+'：'+content)||(filename&&text.includes(filename))})}
-function paintUpdates(){const list=updatePanel.querySelector('#updateList');const entries=[];for(const item of (savedProfile.updates||[])){const text=String(item).trim();if(!text||evidenceDuplicates(text)||text.includes('已上传')&&text.includes('解析完成'))continue;if(!entries.some(e=>e.text===text))entries.push({text,kind:'进展'})}for(const e of (savedProfile.evidence||[])){const raw=String(e.content||'').trim();const excerpt=raw.length>92?raw.slice(0,90)+'…':raw;const label=e.filename?`${e.type||'材料'} · ${e.filename}`:(e.type||'材料');entries.push({text:excerpt,kind:'证据 · '+label})}const visible=entries.slice(-6).reverse();list.innerHTML=visible.map((u,i)=>'<div class="update-item '+(u.kind.startsWith('证据')?'evidence-timeline-item':'')+'"><span class="update-dot"></span><div><strong>'+u.text+'</strong><small>'+u.kind+' · '+(i===0?'刚刚':'路径记录')+'</small></div></div>').join('')||'<div class="empty-update">还没有记录，先写下一件真实发生的事吧。</div>'}paintUpdates();function paintEvidence(){evidencePanel.querySelector('#evidenceList').innerHTML=''}paintEvidence();
-async function submitUpdate(text){if(!text.trim())return;const note=text.trim();savedProfile.updates=[...(savedProfile.updates||[]),note];if(note.includes('软件安全工程师')||note.includes('安全工程师'))savedProfile.target='软件安全工程师';if(note.includes('信息安全'))savedProfile.major='信息安全';if(note.includes('本科大三下'))savedProfile.stage='本科大三下';if(note.includes('211'))savedProfile.school='211';if(note.includes('Python'))savedProfile.experience='掌握 Python，有 2 个 AI 项目经验';localStorage.setItem('pathwiseProfile',JSON.stringify(savedProfile));paintUpdates();updatePanel.querySelector('#updateInput').value='';showToast('正在根据新进展更新路径…');try{const r=await fetch('/api/plan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(savedProfile)});if(!r.ok)throw Error('HTTP '+r.status);const data=await r.json();$('.profile-main h2').textContent=data.profile;$('.profile-main p').textContent=data.summary;renderPlan(data,data.source!=='ai')}catch(e){console.error(e);showToast('进展已保存，但路径更新失败')}}updatePanel.querySelector('#addUpdate').addEventListener('click',()=>submitUpdate(updatePanel.querySelector('#updateInput').value));updatePanel.querySelector('#updateInput').addEventListener('keydown',e=>{if(e.key==='Enter')submitUpdate(e.target.value)});updatePanel.querySelectorAll('[data-update]').forEach(b=>b.addEventListener('click',()=>submitUpdate(b.dataset.update)));
-document.addEventListener('submit',e=>{if(e.target.id==='profileForm'){savedProfile={...savedProfile,...Object.fromEntries(new FormData(e.target))};localStorage.setItem('pathwiseProfile',JSON.stringify(savedProfile))}});
-evidencePanel.querySelector('#addEvidence').addEventListener('click',async()=>{const content=evidencePanel.querySelector('#evidenceInput').value.trim();if(!content)return;const type=evidencePanel.querySelector('#evidenceType').value;savedProfile.evidence=[...(savedProfile.evidence||[]),{type,content}];localStorage.setItem('pathwiseProfile',JSON.stringify(savedProfile));paintUpdates();paintEvidence();evidencePanel.querySelector('#evidenceInput').value='';showToast('正在分析证据并调整计划…');try{const r=await fetch('/api/plan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(savedProfile)});const data=await r.json();$('.profile-main h2').textContent=data.profile;$('.profile-main p').textContent=data.summary;renderPlan(data,data.source!=='ai')}catch(e){showToast('材料已保存，计划将在服务恢复后调整')}});
-evidencePanel.querySelector('#evidenceFile').addEventListener('change',async e=>{const file=e.target.files[0];if(!file)return;showToast('正在解析 '+file.name+' …');try{const body=new FormData();body.append('file',file);const r=await fetch('/api/evidence',{method:'POST',body});if(!r.ok)throw Error('HTTP '+r.status);const parsed=await r.json();const type=evidencePanel.querySelector('#evidenceType').value;savedProfile.evidence=[...(savedProfile.evidence||[]),{type,filename:file.name,content:String(parsed.text||'')}];localStorage.setItem('pathwiseProfile',JSON.stringify(savedProfile));paintUpdates();paintEvidence();evidencePanel.querySelector('#evidenceInput').value=String(parsed.text||'').slice(0,5000);showToast('材料已解析，已生成一条计划调整');companionSay('材料已经收进路径里了，我只展示摘要，原文会用于下一次判断')}catch(err){showToast('文件已选择，但解析服务不可用')}});
-const profileEdit=document.createElement('button');profileEdit.className='profile-edit-inline';profileEdit.textContent='编辑基本信息';profileEdit.addEventListener('click',()=>modal.classList.add('open'));document.querySelector('.profile-main').appendChild(profileEdit);
-try{const restored=JSON.parse(localStorage.getItem('pathwiseProfile')||'null');const previous=JSON.parse(localStorage.getItem('pathwisePlan')||'null');if(restored){const form=$('#profileForm');if(form)Object.entries(restored).forEach(([k,v])=>{if(form.elements[k]&&typeof v==='string')form.elements[k].value=v});if(previous){$('.profile-main h2').textContent=previous.profile||$('.profile-main h2').textContent;$('.profile-main p').textContent=previous.summary||$('.profile-main p').textContent;renderPlan(previous,previous.source!=='ai')}}}catch(error){console.warn('Could not restore saved Pathwise state',error)}
-// Keep the stretch card truthful even before the first plan request.
-try{const p=JSON.parse(localStorage.getItem('pathwiseProfile')||'null');if(p?.target){const card=$$('.range-card')[2];if(card)card.querySelector('h3').textContent='头部大厂 '+p.target}}catch(_){}
-// A file upload is evidence, not a dead-end: automatically recalculate once parsing finishes.
-const evidenceStatus=evidencePanel.querySelector('#evidenceStatus')||(()=>{const n=document.createElement('div');n.id='evidenceStatus';n.className='evidence-status';evidencePanel.appendChild(n);return n})();
-function setEvidenceStatus(text,state=''){evidenceStatus.textContent=text;evidenceStatus.dataset.state=state}
-async function recalculateFromEvidence(){setEvidenceStatus('已解析，正在让 AI 重算岗位与阶段…','loading');try{const r=await fetch('/api/plan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(savedProfile)});if(!r.ok)throw Error('HTTP '+r.status);const data=await r.json();$('.profile-main h2').textContent=data.profile;$('.profile-main p').textContent=data.summary;renderPlan(data,data.source!=='ai');setEvidenceStatus(data.source==='ai'?'计划已根据新证据更新':'AI 暂不可用，已用本地规划更新','done')}catch(error){console.error(error);setEvidenceStatus('证据已保存；计划重算失败，服务恢复后可再次点击“分析并调整计划”。','error')}}
-evidencePanel.querySelector('#evidenceFile').addEventListener('change',()=>{setTimeout(()=>{if(savedProfile.evidence?.length){recalculateFromEvidence()}},700)});
-if(!localStorage.getItem('pathwiseOnboarded')){
-  const welcome=document.createElement('section');welcome.className='welcome-band';welcome.innerHTML='<div><span class="kicker">FIRST PATH</span><h2>先从简历开始，生成你的第一条路径。</h2><p>上传后会提取教育背景、项目和经历；之后的每次进展都会继续修正这条路径。</p></div><div class="welcome-actions"><button class="welcome-upload" type="button">上传简历</button><button class="welcome-skip" type="button">先填写画像</button><input type="file" accept=".pdf,.docx,.txt,.md" hidden></div>';document.querySelector('.profile-bar').after(welcome);
-  const input=welcome.querySelector('input');welcome.querySelector('.welcome-upload').onclick=()=>input.click();welcome.querySelector('.welcome-skip').onclick=()=>{localStorage.setItem('pathwiseOnboarded','1');welcome.remove();modal.classList.add('open')};input.onchange=()=>{if(!input.files[0])return;localStorage.setItem('pathwiseOnboarded','1');welcome.remove();const target=evidencePanel.querySelector('#evidenceFile');try{target.files=input.files;target.dispatchEvent(new Event('change',{bubbles:true}))}catch(_){evidencePanel.querySelector('#evidenceInput').value='简历文件已选择，请在下方上传证据入口重新选择一次。'}evidencePanel.scrollIntoView({behavior:'smooth'});showToast('简历已进入证据库，正在解析…')};
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, char => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  })[char]);
 }
-const growthPanel=document.createElement('section');growthPanel.className='growth-report';growthPanel.innerHTML='<div class="growth-head"><div><span class="kicker">LIVING REPORT</span><h2>你的成长报告</h2><p>它会随行动和证据逐步生长，不会一次写满。</p></div><div class="growth-score"><strong id="growthScore">0</strong><span>/ 100 路径完成度</span></div></div><div class="growth-tree" id="growthTree"></div><div class="growth-foot"><span id="growthHint">完成第一个行动，点亮第一颗种子。</span><button id="growthExport">导出报告</button></div>';document.querySelector('.main').appendChild(growthPanel);
-function renderGrowth(){const plan=JSON.parse(localStorage.getItem('pathwisePlan')||'null')||demoPlan(savedProfile);const tasks=$$('.task');const done=tasks.filter(t=>t.classList.contains('done')).length;const evidence=(savedProfile.evidence||[]).length;const score=Math.min(100,Math.round(done/Math.max(tasks.length,3)*55+Math.min(evidence,4)*9));$('#growthScore').textContent=score;const labels=[['看见自己','画像已建立'],['拿到证据',evidence?evidence+' 份材料已进入路径':'上传简历或项目材料'],['形成能力',done?done+' 个行动已完成':'完成一个可展示案例'],['抵达目标',(plan.graduationRoles&&plan.graduationRoles[0]&&plan.graduationRoles[0].title)||'毕业可达岗位']];$('#growthTree').innerHTML=labels.map((n,i)=>'<div class=\"growth-node '+(i===0||i<=Math.ceil(score/26)?'lit':'')+'\" style=\"--delay:'+i*140+'ms\"><span class=\"growth-dot\">'+(i===0?'✦':i+1)+'</span><div><strong>'+n[0]+'</strong><small>'+n[1]+'</small></div></div>').join('');$('#growthHint').textContent=done?'下一颗种子已经出现：把行动结果写进最近进展。':'完成第一个行动，点亮第一颗种子。'}
-renderGrowth();document.addEventListener('click',e=>{if(e.target.closest('.task'))setTimeout(renderGrowth,40)});$('#growthExport').onclick=()=>{const report={profile:savedProfile,plan:JSON.parse(localStorage.getItem('pathwisePlan')||'null'),generatedAt:new Date().toISOString()};const blob=new Blob([JSON.stringify(report,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='pathwise-growth-report.json';a.click();URL.revokeObjectURL(a.href);showToast('成长报告已导出')};
-try{const savedTasks=JSON.parse(localStorage.getItem('pathwiseTasks')||'[]');$$('.task').forEach(t=>{if(savedTasks.includes(t.dataset.task)){t.classList.add('done');t.textContent='✓ '+t.dataset.task}})}catch(_){}document.addEventListener('click',e=>{const task=e.target.closest('.task');if(task){const values=$$('.task.done').map(t=>t.dataset.task);localStorage.setItem('pathwiseTasks',JSON.stringify(values))}});
-fetch(pathwiseApiOrigin+'/api/health').then(r=>r.json()).then(s=>{if(s.configured){companionSay('AI 已连接 · '+s.model)}else{const hit=Object.entries(s.sources||{}).filter(([,v])=>v).map(([k])=>k).join('、');companionSay(hit?'服务已连接，但模型配置需要检查。':'服务已连接，但运行中的 Python 没有继承 API Key。')}}).catch(()=>{});
-// One delayed authoritative check prevents the legacy first health request from overwriting the status.
-setTimeout(()=>fetch(pathwiseApiOrigin+'/api/health',{cache:'no-store'}).then(r=>r.json()).then(s=>{if(s.configured)companionSay('AI 已连接 · '+s.model+' · PID '+s.pid);else companionSay('服务已连接，但当前实例没有可用模型 Key（PID '+(s.pid||'?')+'）。')}).catch(()=>{}),900);
-let progressStartedAt=0;setInterval(()=>{if(progress.classList.contains('show')){if(!progressStartedAt)progressStartedAt=Date.now();const elapsed=Date.now()-progressStartedAt;if(elapsed>90000&&elapsed<91000)$('#aiProgressLabel').textContent='线上模型仍在整理长文档…';if(elapsed>200000){finishProgress();companionSay('线上模型响应超过 200 秒，我先保留本地规划结果。')}}else{progressStartedAt=0}},1000);
+
+function compact(value, length = 110) {
+  const text = String(value ?? '').replace(/\s+/g, ' ').trim();
+  return text.length > length ? `${text.slice(0, length - 1)}…` : text;
+}
+
+function unique(items) {
+  return [...new Set(items.filter(Boolean))];
+}
+
+let profile = { ...DEFAULT_PROFILE, ...readJSON(STORAGE.profile, {}) };
+profile.updates = Array.isArray(profile.updates) ? profile.updates : [];
+profile.evidence = Array.isArray(profile.evidence) ? profile.evidence.map(item => typeof item === 'string' ? { type: '材料', content: item } : item).filter(Boolean) : [];
+profile.updates = unique(profile.updates.map(String).filter(update => {
+  const text = update.trim();
+  if (!text || (/已上传/.test(text) && /解析完成/.test(text))) return false;
+  return !profile.evidence.some(item => {
+    const content = String(item?.content || '').trim();
+    const filename = String(item?.filename || '').trim();
+    return (content && text.includes(content.slice(0, Math.min(80, content.length)))) || (filename && text.includes(filename));
+  });
+}));
+let plan = readJSON(STORAGE.plan, null);
+if (plan) {
+  const planText = JSON.stringify([plan.profile, plan.summary, plan.currentRoles, plan.graduationRoles]);
+  const targetKey = /安全/.test(profile.target) ? '安全' : profile.target.replace(/工程师|产品经理|经理|实习生|专员/g, '').trim();
+  if (targetKey && !planText.toLowerCase().includes(targetKey.toLowerCase())) plan = null;
+}
+let completedTasks = new Set(readJSON(STORAGE.tasks, []));
+let activeTask = '';
+let progressTimer = null;
+let toastTimer = null;
+
+function makeLocalPlan(sourceProfile = profile, reason = '') {
+  const target = sourceProfile.target || '目标岗位';
+  const security = /安全|攻防|渗透|审计/.test(target);
+  const actions = security
+    ? ['拆解 10 个目标安全岗位 JD', '完成一份代码审计案例', '进行一次安全项目深挖模拟']
+    : ['拆解 10 个目标岗位 JD', '完成一份可量化项目案例', '进行一次目标岗位项目深挖模拟'];
+  const skill = security ? '安全基础与工程实践' : '岗位核心技能';
+  const proof = security ? '代码审计、漏洞分析或安全工具成果' : '可量化项目结果';
+
+  return {
+    source: 'local',
+    status: 'degraded',
+    reason,
+    profile: `${sourceProfile.stage} · ${sourceProfile.school} ${sourceProfile.major}`,
+    summary: `${sourceProfile.experience || '暂未补充经历'} · 目标：${target}`,
+    currentRoles: [
+      { title: `${target}实习生`, match: 58, reason: `专业与目标方向有重合，但仍需用具体成果证明${skill}。` },
+      { title: security ? '安全开发实习生' : '相邻方向实习生', match: 66, reason: '现有技能可以作为现实入口，再逐步向目标方向收敛。' }
+    ],
+    graduationRoles: [
+      { title: target, match: 70, reason: `毕业前补齐一段相关经历和${proof}后，可以作为重点投递方向。` },
+      { title: security ? 'AI 安全工程师' : `${target}（进阶方向）`, match: 52, reason: '需要形成差异化项目、实习结果和稳定的面试表达。' }
+    ],
+    gaps: [skill, proof, '真实面试反馈与复盘闭环'],
+    actions,
+    actionGuides: actions.map((title, index) => ({
+      title,
+      why: ['先确认岗位真正需要什么，避免把时间花在低频能力上。', '招聘方需要能查看、能追问、能验证的成果。', '把经历组织成面试中可以稳定讲清的证据。'][index],
+      steps: index === 0
+        ? ['收集 10 个近 30 天发布的岗位 JD', '标出重复出现的技能、任务和成果', '整理最高频的 3 项要求并更新简历']
+        : index === 1
+          ? ['选一个与目标岗位最相关的真实问题', '完成方案、过程、结果和取舍记录', '整理为一页案例并获得一次外部反馈']
+          : ['准备背景、目标、行动、结果四段表达', '录制一次 15 分钟模拟面试', '复听并修改三个最模糊的回答'],
+      doneWhen: ['形成一张岗位能力对照表', '形成一份可展示、可复述的案例', '能在 3 分钟内讲清项目并回答追问'][index]
+    })),
+    stages: [
+      { title: '确认入口与补齐基础证据', why: '先找到现阶段够得着的入口，并集中补最影响筛选的一项能力。', tasks: actions, doneWhen: '完成三个近期行动并获得一次真实反馈' },
+      { title: `形成 ${target} 的能力证据`, why: '把学习和 Demo 转成能被招聘方验证的项目、实习或公开成果。', tasks: ['完成一项真实场景项目', '记录可量化结果与关键取舍', '把成果更新进简历和作品集'], doneWhen: '至少形成两条可验证的核心证据' },
+      { title: `冲刺毕业 ${target}`, why: '根据投递和面试反馈持续修正，不用一份静态计划押完整个校招。', tasks: ['建立分层投递岗位池', '每周进行一次模拟面试', '每次反馈后更新计划和材料'], doneWhen: '完成目标岗位的成套投递并获得理想结果' }
+    ]
+  };
+}
+
+function showToast(message) {
+  const toast = $('#toast');
+  clearTimeout(toastTimer);
+  toast.textContent = message;
+  toast.classList.add('show');
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 2800);
+}
+
+function companionSay(message) {
+  $('#companionText').textContent = compact(message, 90);
+  $('#companion').classList.remove('hidden');
+}
+
+function setAIStatus(text, ready) {
+  $('#aiStatus').textContent = text;
+  $('.top-status').classList.toggle('offline', !ready);
+}
+
+function startProgress() {
+  clearInterval(progressTimer);
+  const bar = $('#aiProgress');
+  const fill = $('#aiProgressFill');
+  const percent = $('#aiProgressPercent');
+  const label = $('#aiProgressLabel');
+  const labels = ['读取画像与证据', '对比目标岗位', '识别关键差距', '生成三阶段路径', '整理行动指导'];
+  let value = 8;
+  bar.classList.add('show');
+  const tick = () => {
+    value = Math.min(92, value + Math.max(1, (92 - value) * .08));
+    fill.style.width = `${value}%`;
+    percent.textContent = `${Math.round(value)}%`;
+    label.textContent = labels[Math.min(labels.length - 1, Math.floor(value / 20))];
+  };
+  tick();
+  progressTimer = setInterval(tick, 420);
+}
+
+function finishProgress(message = '路径已更新') {
+  clearInterval(progressTimer);
+  $('#aiProgressFill').style.width = '100%';
+  $('#aiProgressPercent').textContent = '100%';
+  $('#aiProgressLabel').textContent = message;
+  setTimeout(() => $('#aiProgress').classList.remove('show'), 850);
+}
+
+async function requestJSON(path, options = {}, timeout = 80000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeout);
+  try {
+    const response = await fetch(api(path), { ...options, signal: controller.signal });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
+    return data;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function profileCompleteness() {
+  const basics = ['stage', 'school', 'major', 'target', 'experience'].filter(key => String(profile[key] || '').trim()).length;
+  const evidenceScore = Math.min(25, profile.evidence.length * 7);
+  const updateScore = Math.min(15, profile.updates.length * 4);
+  return Math.min(99, Math.round(basics / 5 * 60 + evidenceScore + updateScore));
+}
+
+function renderProfile(currentPlan = plan) {
+  const title = currentPlan?.profile || `${profile.stage} · ${profile.school} ${profile.major}`;
+  const summary = currentPlan?.summary || `${profile.experience} · 目标：${profile.target}`;
+  $('#profileTitle').textContent = compact(title, 70);
+  $('#profileSummary').textContent = compact(summary, 118);
+  $('#stageStat').textContent = profile.stage.replace(/^本科/, '') || '待补充';
+  $('#targetStat').textContent = compact(profile.target.replace(/工程师|经理|实习生/g, ''), 8) || '待补充';
+  $('#profileScore').innerHTML = `${profileCompleteness()}<em>%</em>`;
+  $('#profileOrb').textContent = (profile.major || 'ME').slice(0, 2).toUpperCase();
+  $('#userMeta').textContent = `${profile.stage} · ${profile.major}`;
+}
+
+function pickRoles(currentPlan) {
+  const currentRoles = Array.isArray(currentPlan.currentRoles) ? currentPlan.currentRoles : [];
+  const graduationRoles = Array.isArray(currentPlan.graduationRoles) ? currentPlan.graduationRoles : [];
+  const current = [...currentRoles].sort((a, b) => Number(b.match || 0) - Number(a.match || 0))[0];
+  const graduation = [...graduationRoles].sort((a, b) => Number(b.match || 0) - Number(a.match || 0))[0];
+  const stretch = graduationRoles.find(role => role.title !== graduation?.title) || currentRoles.find(role => role.title !== current?.title) || {
+    title: `${profile.target}进阶方向`, match: Math.max(30, Number(graduation?.match || 55) - 18), reason: '需要更多真实成果、复杂任务和面试反馈作为证据。'
+  };
+  return [current, graduation, stretch];
+}
+
+function renderRoles(currentPlan) {
+  const roles = pickRoles(currentPlan);
+  $$('.role-card').forEach((card, index) => {
+    const role = roles[index] || {};
+    const match = Math.max(0, Math.min(100, Number(role.match || 0)));
+    $('h3', card).textContent = role.title || '待生成岗位';
+    $('p', card).textContent = compact(role.reason || '补充画像后生成岗位判断。', 112);
+    $('.match-value', card).textContent = match || '--';
+    $('.match-track i', card).style.width = `${match}%`;
+    card.dataset.role = JSON.stringify(role);
+  });
+  const gaps = unique((currentPlan.gaps || []).map(item => compact(item, 55))).slice(0, 4);
+  $('#gapList').innerHTML = gaps.length ? gaps.map(item => `<i>${escapeHtml(item)}</i>`).join('') : '<i>暂无有效差距信息</i>';
+}
+
+function renderStages(currentPlan) {
+  const stages = Array.isArray(currentPlan.stages) && currentPlan.stages.length ? currentPlan.stages.slice(0, 3) : makeLocalPlan().stages;
+  $('#stageList').innerHTML = stages.map((stage, stageIndex) => {
+    const tasks = unique(stageIndex === 0 && currentPlan.actions?.length ? currentPlan.actions : (stage.tasks || [])).slice(0, 4);
+    return `<article class="stage ${stageIndex === 0 ? 'active' : ''}">
+      <div class="stage-index">0${stageIndex + 1}</div>
+      <div class="stage-body">
+        <div class="stage-title"><h3>${escapeHtml(stage.title || `阶段 ${stageIndex + 1}`)}</h3><span>${stageIndex === 0 ? '现在 · 进行中' : '后续 · 待解锁'}</span></div>
+        <p>${escapeHtml(stage.why || '')}</p>
+        <div class="stage-tasks">${tasks.map(task => `<div class="action-row"><button class="task-toggle ${completedTasks.has(task) ? 'done' : ''}" data-task="${escapeHtml(task)}" type="button">${escapeHtml(task)}</button><button class="task-guide" data-task="${escapeHtml(task)}" type="button">详细指导 →</button></div>`).join('')}</div>
+      </div>
+    </article>`;
+  }).join('');
+  syncTaskUI();
+}
+
+function syncTaskUI() {
+  const tasks = $$('.task-toggle');
+  const done = tasks.filter(task => task.classList.contains('done')).length;
+  $('#doneCount').textContent = done;
+  $('#pendingCount').textContent = Math.max(0, tasks.length - done);
+  const first = tasks.find(task => !task.classList.contains('done')) || tasks[0];
+  $('#focusTitle').textContent = first?.dataset.task || '路径行动已完成';
+  $('#focusMeta').textContent = first ? '打开详细指导，完成后留下成果。' : '可以补充新进展，让 AI 生成下一段路径。';
+  writeJSON(STORAGE.tasks, [...completedTasks]);
+  renderGrowth();
+}
+
+function renderActivity() {
+  const entries = [];
+  for (const update of profile.updates) {
+    const text = compact(update, 130);
+    if (text && !entries.some(item => item.text === text)) entries.push({ type: '进展', text });
+  }
+  for (const item of profile.evidence) {
+    const raw = String(item?.content || '').trim();
+    const label = item?.filename ? `${item.type || '材料'} · ${item.filename}` : (item?.type || '材料');
+    entries.push({ type: label, text: compact(raw || '材料已保存，暂无可展示摘要。', 130), material: true });
+  }
+  const visible = entries.slice(-8).reverse();
+  $('#activityCount').textContent = `${entries.length} 条记录`;
+  $('#updateList').innerHTML = visible.length ? visible.map((item, index) => `<div class="update-item ${item.material ? 'material' : ''}"><span class="update-dot"></span><div><strong>${escapeHtml(item.text)}</strong><small>${escapeHtml(item.type)} · ${index === 0 ? '刚刚' : '路径记录'}</small></div></div>`).join('') : '<div class="empty-update">还没有记录。完成行动、上传简历或说一条真实进展，路径会从这里开始生长。</div>';
+}
+
+function renderGrowth() {
+  if (!$('#growthTree')) return;
+  const taskCount = $$('.task-toggle').length || 9;
+  const done = $$('.task-toggle.done').length;
+  const evidenceCount = profile.evidence.length;
+  const updateCount = profile.updates.length;
+  const score = Math.min(100, Math.round(20 + done / taskCount * 45 + Math.min(evidenceCount, 4) * 7 + Math.min(updateCount, 3) * 2));
+  $('#growthScore').textContent = score;
+  const graduationRole = pickRoles(plan || makeLocalPlan())[1]?.title || profile.target;
+  const nodes = [
+    ['建立画像', `${profile.stage} · ${profile.major}`],
+    ['留下证据', evidenceCount ? `${evidenceCount} 份材料已验证` : '上传简历或成果'],
+    ['形成能力', done ? `${done} 项行动已完成` : '完成第一个行动'],
+    ['抵达目标', graduationRole]
+  ];
+  $('#growthTree').innerHTML = nodes.map((node, index) => `<div class="growth-node ${index <= Math.floor(score / 26) ? 'lit' : ''}"><span class="node-dot">${index === 0 ? '✦' : index + 1}</span><strong>${escapeHtml(node[0])}</strong><small>${escapeHtml(node[1])}</small></div>`).join('');
+  $('#growthHint').textContent = done ? `已完成 ${done} 项行动。下一次真实成果会继续提高岗位判断的可信度。` : '完成第一个行动，点亮路径的下一站。';
+}
+
+function renderAll(currentPlan) {
+  plan = currentPlan || makeLocalPlan();
+  renderProfile(plan);
+  renderRoles(plan);
+  renderStages(plan);
+  renderActivity();
+  renderGrowth();
+}
+
+function persistProfile() {
+  writeJSON(STORAGE.profile, profile);
+  renderProfile(plan);
+  renderActivity();
+}
+
+async function recalculate(successMessage = '路径已经根据新信息更新。') {
+  startProgress();
+  try {
+    const result = await requestJSON('/api/plan', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(profile)
+    });
+    if (!result.currentRoles || !result.stages) throw new Error('模型返回缺少规划字段');
+    plan = { ...result, source: result.source || 'ai' };
+    writeJSON(STORAGE.plan, plan);
+    renderAll(plan);
+    finishProgress();
+    showToast('AI 已更新岗位与三阶段路径');
+    companionSay(successMessage);
+    setAIStatus(`AI 已连接 · ${plan.source === 'ai' ? '在线规划' : '本地规划'}`, plan.source === 'ai');
+    return true;
+  } catch (error) {
+    const reason = error.name === 'AbortError' ? '模型响应超时' : error.message;
+    plan = makeLocalPlan(profile, reason);
+    writeJSON(STORAGE.plan, plan);
+    renderAll(plan);
+    finishProgress('已先生成本地路径');
+    showToast('新信息已保存，先使用本地路径');
+    companionSay(`${reason}。你的信息没有丢失，可稍后再次更新。`);
+    return false;
+  }
+}
+
+function openModal(element) { element.classList.add('open'); }
+function closeModal(element) { element.classList.remove('open'); }
+
+function openDrawer({ kicker = 'ACTION GUIDE', title, intro = '', content, action = '关闭指导', task = '' }) {
+  activeTask = task;
+  $('#drawerKicker').textContent = kicker;
+  $('#drawerTitle').textContent = title;
+  $('#drawerIntro').textContent = intro;
+  $('#drawerContent').innerHTML = content;
+  $('#drawerDone').textContent = action;
+  openModal($('#drawer'));
+}
+
+function localGuide(action) {
+  const cachedPlanGuide = (plan?.actionGuides || []).find(item => item.title === action);
+  return {
+    title: action,
+    why: cachedPlanGuide?.why || `这一步会为“${profile.target}”补充一条可验证的能力证据。`,
+    steps: cachedPlanGuide?.steps || ['明确最终要交付的具体结果', '拆成三个不超过 45 分钟的小步骤', '整理过程、结果和一次复盘'],
+    resources: ['目标岗位 JD', '个人经历材料', '复盘模板'],
+    estimatedTime: '2-4 小时，可分两次完成',
+    doneWhen: cachedPlanGuide?.doneWhen || '形成一份可查看、可复述的成果',
+    evidence: '完成后记录成果、数据、反馈或链接，加入证据链。',
+    source: 'local'
+  };
+}
+
+function guideHtml(guide) {
+  const resources = (guide.resources || []).map(item => `<span>${escapeHtml(item)}</span>`).join('');
+  return `<div class="guide-detail"><h3>照着做</h3><ol>${(guide.steps || []).map((step, index) => `<li><b>0${index + 1}</b><span>${escapeHtml(step)}</span></li>`).join('')}</ol></div>
+    <div class="guide-meta"><div><small>预计耗时</small><strong>${escapeHtml(guide.estimatedTime || '按个人节奏完成')}</strong></div><div><small>完成标准</small><strong>${escapeHtml(guide.doneWhen || '形成可验证成果')}</strong></div></div>
+    ${resources ? `<div class="guide-resources"><small>准备这些</small>${resources}</div>` : ''}
+    <div class="guide-evidence"><small>完成后留下什么</small><p>${escapeHtml(guide.evidence || '记录成果与复盘。')}</p></div>`;
+}
+
+async function openActionGuide(action) {
+  openDrawer({ title: action, intro: '正在结合你的画像与证据，把这一项拆成可以直接执行的步骤。', content: '<div class="guide-loading"><i></i><span>正在生成个人行动指导…</span></div>', action: completedTasks.has(action) ? '记录成果' : '完成并记录成果', task: action });
+  const cache = readJSON(STORAGE.guides, {});
+  let guide = cache[action];
+  if (!guide) {
+    try {
+      guide = await requestJSON('/api/action-guide', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, profile })
+      }, 45000);
+      cache[action] = guide;
+      writeJSON(STORAGE.guides, cache);
+    } catch {
+      guide = localGuide(action);
+      showToast('已显示本地指导，在线模型恢复后可再次深化');
+    }
+  }
+  $('#drawerKicker').textContent = guide.source === 'ai' ? 'AI ACTION GUIDE' : 'ACTION GUIDE';
+  $('#drawerTitle').textContent = guide.title || action;
+  $('#drawerIntro').textContent = guide.why || '';
+  $('#drawerContent').innerHTML = guideHtml(guide);
+}
+
+function openOutcome(action) {
+  activeTask = action;
+  $('#outcomePrompt').textContent = `“${action}”已完成。记录结果后，它会进入证据链并重新校准计划。`;
+  $('#outcomeText').value = '';
+  $('#outcomeLink').value = '';
+  openModal($('#outcomeModal'));
+  setTimeout(() => $('#outcomeText').focus(), 40);
+}
+
+function fillProfileForm() {
+  const form = $('#profileForm');
+  Object.entries(profile).forEach(([key, value]) => {
+    if (form.elements[key] && typeof value === 'string') form.elements[key].value = value;
+  });
+}
+
+async function addUpdate(text) {
+  const note = String(text || '').trim();
+  if (!note) return showToast('先写下一条真实进展');
+  profile.updates.push(note);
+  persistProfile();
+  $('#updateInput').value = '';
+  await recalculate('新进展已经进入路径，我重新排好了后续优先级。');
+}
+
+async function addEvidence(content, meta = {}) {
+  const text = String(content || '').trim();
+  if (!text) return showToast('先粘贴内容或选择一个文件');
+  profile.evidence.push({ type: meta.type || $('#evidenceType').value, filename: meta.filename || '', content: text, addedAt: new Date().toISOString() });
+  persistProfile();
+  $('#evidenceInput').value = '';
+  await recalculate('材料已进入证据链，岗位与行动路径已经重新判断。');
+}
+
+async function checkHealth() {
+  try {
+    const health = await requestJSON('/api/health', { cache: 'no-store' }, 9000);
+    if (health.configured) {
+      const label = `AI 已连接 · ${health.model || '在线模型'}`;
+      setAIStatus(label, true);
+      companionSay('在线模型已连接。每次新进展都能重新校准整条路径。');
+    } else {
+      setAIStatus('本地规划可用 · 在线模型未配置', false);
+      companionSay('在线模型暂未配置，但画像、行动、证据与本地规划都可以正常使用。');
+    }
+  } catch {
+    setAIStatus('本地规划可用 · 服务未连接', false);
+    companionSay('当前使用本地规划。启动 Python 服务后可生成在线 AI 路径。');
+  }
+}
+
+function bindEvents() {
+  $$('.side-link').forEach(button => button.addEventListener('click', () => {
+    const target = $(`#${button.dataset.target}`);
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }));
+
+  $('#sideFocusBtn').addEventListener('click', () => {
+    const first = $('.task-toggle:not(.done)') || $('.task-toggle');
+    if (first) {
+      first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(() => openActionGuide(first.dataset.task), 350);
+    }
+  });
+
+  $('#compareBtn').addEventListener('click', () => openDrawer({
+    kicker: 'MATCH EXPLAINER', title: '匹配度不是录取概率', intro: '它只表达当前证据与岗位要求的重合程度。',
+    content: '<div class="guide-block"><strong>01</strong><p>现在可投：以现有经历判断现实入口。</p></div><div class="guide-block"><strong>02</strong><p>毕业落点：考虑毕业前可以合理补齐的能力和经历。</p></div><div class="guide-block"><strong>03</strong><p>进阶选择：需要额外实习、项目结果或更强竞争背书。</p></div>'
+  }));
+
+  $$('.open-guide').forEach(button => button.addEventListener('click', () => {
+    const card = button.closest('.role-card');
+    const role = JSON.parse(card.dataset.role || '{}');
+    const gaps = plan?.gaps || [];
+    openDrawer({
+      kicker: ['ROLE / NOW', 'ROLE / GRADUATION', 'ROLE / STRETCH'][Number(button.dataset.roleIndex)] || 'ROLE GUIDE',
+      title: role.title || '岗位建议', intro: role.reason || '',
+      content: `<div class="guide-detail"><h3>判断依据</h3><ol>${gaps.slice(0, 3).map((gap, index) => `<li><b>0${index + 1}</b><span>${escapeHtml(gap)}</span></li>`).join('')}</ol></div><div class="guide-evidence"><small>下一步</small><p>优先完成行动路径中的第一项，并用成果更新这张岗位地图。</p></div>`
+    });
+  }));
+
+  $('#stageList').addEventListener('click', event => {
+    const guide = event.target.closest('.task-guide');
+    if (guide) return openActionGuide(guide.dataset.task);
+    const task = event.target.closest('.task-toggle');
+    if (!task) return;
+    const name = task.dataset.task;
+    if (completedTasks.has(name)) {
+      completedTasks.delete(name);
+      task.classList.remove('done');
+      showToast('已恢复为待完成');
+    } else {
+      completedTasks.add(name);
+      task.classList.add('done');
+      showToast('行动已完成，继续留下成果');
+      setTimeout(() => openOutcome(name), 150);
+    }
+    syncTaskUI();
+  });
+
+  $$('.compose-tabs button').forEach(button => button.addEventListener('click', () => {
+    $$('.compose-tabs button').forEach(item => item.classList.toggle('active', item === button));
+    $$('.compose-pane').forEach(pane => pane.classList.toggle('active', pane.dataset.pane === button.dataset.compose));
+  }));
+
+  $('#addUpdate').addEventListener('click', () => addUpdate($('#updateInput').value));
+  $$('.quick-updates button').forEach(button => button.addEventListener('click', () => {
+    $('#updateInput').value = button.dataset.update;
+    $('#updateInput').focus();
+  }));
+  $('#addEvidence').addEventListener('click', () => addEvidence($('#evidenceInput').value));
+
+  $('#evidenceFile').addEventListener('change', async event => {
+    const file = event.target.files[0];
+    if (!file) return;
+    const status = $('#evidenceStatus');
+    status.className = 'evidence-status';
+    status.textContent = `正在解析 ${file.name}…`;
+    try {
+      const body = new FormData();
+      body.append('file', file);
+      const parsed = await requestJSON('/api/evidence', { method: 'POST', body }, 45000);
+      status.textContent = '解析完成，正在根据材料调整路径…';
+      await addEvidence(parsed.text, { type: $('#evidenceType').value, filename: file.name });
+      status.textContent = '材料已保存，计划已完成一次更新。';
+    } catch (error) {
+      status.className = 'evidence-status error';
+      status.textContent = `解析失败：${error.message}`;
+      showToast('材料没有写入证据链，请检查文件后重试');
+    } finally {
+      event.target.value = '';
+    }
+  });
+
+  const openProfile = () => { fillProfileForm(); openModal($('#profileModal')); };
+  $('#editProfile').addEventListener('click', openProfile);
+  $('.profile-edit-inline').addEventListener('click', openProfile);
+  $('#modalResumeBtn').addEventListener('click', () => {
+    closeModal($('#profileModal'));
+    const materialTab = $('[data-compose="material"]');
+    materialTab.click();
+    $('#evidence').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setTimeout(() => $('#evidenceFile').click(), 450);
+  });
+  $('#profileForm').addEventListener('submit', async event => {
+    event.preventDefault();
+    profile = { ...profile, ...Object.fromEntries(new FormData(event.target)) };
+    persistProfile();
+    closeModal($('#profileModal'));
+    await recalculate('基本信息已经更新，整条路径也同步换成了新的目标。');
+  });
+
+  $('#outcomeForm').addEventListener('submit', async event => {
+    event.preventDefault();
+    const text = $('#outcomeText').value.trim();
+    const link = $('#outcomeLink').value.trim();
+    if (!text) return;
+    closeModal($('#outcomeModal'));
+    closeModal($('#drawer'));
+    await addEvidence(`${activeTask}：${text}${link ? `（成果链接：${link}）` : ''}`, { type: '行动成果' });
+  });
+
+  $('#drawerDone').addEventListener('click', () => {
+    if (!activeTask) return closeModal($('#drawer'));
+    completedTasks.add(activeTask);
+    $$('.task-toggle').filter(task => task.dataset.task === activeTask).forEach(task => task.classList.add('done'));
+    syncTaskUI();
+    closeModal($('#drawer'));
+    openOutcome(activeTask);
+  });
+  $('#closeDrawer').addEventListener('click', () => closeModal($('#drawer')));
+
+  $$('.modal-close, .outcome-cancel, .reset-cancel').forEach(button => button.addEventListener('click', () => closeModal(button.closest('.modal-backdrop'))));
+  $$('.modal-backdrop, .drawer-backdrop').forEach(backdrop => backdrop.addEventListener('click', event => { if (event.target === backdrop) closeModal(backdrop); }));
+
+  $('.reset-path').addEventListener('click', () => openModal($('#resetModal')));
+  $('.reset-confirm').addEventListener('click', () => {
+    Object.values(STORAGE).forEach(key => localStorage.removeItem(key));
+    location.reload();
+  });
+
+  $('#themeToggle').addEventListener('click', () => {
+    document.body.classList.toggle('night');
+    localStorage.setItem(STORAGE.theme, document.body.classList.contains('night') ? 'night' : 'day');
+  });
+  $('#closeCompanion').addEventListener('click', () => $('#companion').classList.add('hidden'));
+
+  $('#growthExport').addEventListener('click', () => {
+    const report = { profile, plan, completedTasks: [...completedTasks], generatedAt: new Date().toISOString() };
+    const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'pathwise-growth-report.json';
+    link.click();
+    URL.revokeObjectURL(link.href);
+    showToast('成长报告已导出');
+  });
+
+  document.addEventListener('keydown', event => {
+    if (event.key !== 'Escape') return;
+    $$('.open').forEach(element => closeModal(element));
+  });
+
+  const observer = new IntersectionObserver(entries => {
+    const visible = entries.filter(entry => entry.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+    if (!visible) return;
+    $$('.side-link').forEach(button => button.classList.toggle('active', button.dataset.target === visible.target.id));
+  }, { rootMargin: '-20% 0px -65% 0px', threshold: [0, .2, .6] });
+  $$('#overview, #roles, #route, #evidence, #growth').forEach(section => observer.observe(section));
+}
+
+function init() {
+  if (localStorage.getItem(STORAGE.theme) === 'night') document.body.classList.add('night');
+  $('.hero-visual img').addEventListener('error', () => $('.hero-visual').classList.add('fallback'));
+  const updateClock = () => { $('#clock').textContent = new Intl.DateTimeFormat('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date()); };
+  updateClock();
+  setInterval(updateClock, 30000);
+  bindEvents();
+  persistProfile();
+  renderAll(plan || makeLocalPlan());
+  checkHealth();
+  if (!localStorage.getItem(STORAGE.profile)) {
+    setTimeout(() => {
+      companionSay('第一次使用，先更新基本信息；也可以直接到“进展证据”上传简历。');
+      fillProfileForm();
+      openModal($('#profileModal'));
+    }, 550);
+  }
+}
+
+init();
