@@ -190,6 +190,20 @@ function renderProfile(currentPlan = plan) {
   $('#userMeta').textContent = `${profile.stage} · ${profile.major}`;
 }
 
+function renderDecision(currentPlan) {
+  const next = $('.task-toggle:not(.done)') || $('.task-toggle');
+  const gaps = (currentPlan?.gaps || []).filter(Boolean);
+  const role = pickRoles(currentPlan || makeLocalPlan())[1]?.title || profile.target || '目标岗位';
+  const gap = compact(gaps[0] || '补充一条真实成果', 18);
+  $('#decisionTitle').textContent = next?.dataset.task || '补充一条真实进展';
+  $('#decisionReason').textContent = next ? `这一步会直接补齐“${gap}”，完成后可以重新判断你距离 ${role} 还差什么。` : '你已经完成当前行动清单，记录新的进展后会生成下一轮优先级。';
+  $('#pulseTarget').textContent = compact(role.replace(/（.*?）/g, ''), 15);
+  $('#pulseGap').textContent = gap;
+  $('#pulseUpdate').textContent = profile.evidence.length ? '材料已进入' : '等你记录';
+  $('#decisionCta').textContent = next ? '打开这一步 →' : '记录新进展 →';
+  $('#decisionCta').dataset.task = next?.dataset.task || '';
+}
+
 function pickRoles(currentPlan) {
   const currentRoles = Array.isArray(currentPlan.currentRoles) ? currentPlan.currentRoles : [];
   const graduationRoles = Array.isArray(currentPlan.graduationRoles) ? currentPlan.graduationRoles : [];
@@ -242,6 +256,7 @@ function syncTaskUI() {
   $('#focusMeta').textContent = first ? '打开详细指导，完成后留下成果。' : '可以补充新进展，让 AI 生成下一段路径。';
   writeJSON(STORAGE.tasks, [...completedTasks]);
   renderGrowth();
+  renderDecision(plan || makeLocalPlan());
 }
 
 function renderActivity() {
@@ -286,6 +301,7 @@ function renderAll(currentPlan) {
   renderStages(plan);
   renderActivity();
   renderGrowth();
+  renderDecision(plan);
 }
 
 function persistProfile() {
@@ -441,6 +457,14 @@ function bindEvents() {
       first.scrollIntoView({ behavior: 'smooth', block: 'center' });
       setTimeout(() => openActionGuide(first.dataset.task), 350);
     }
+  });
+
+  $('#decisionCta').addEventListener('click', () => {
+    const task = $('#decisionCta').dataset.task;
+    if (task) return openActionGuide(task);
+    $('[data-compose="update"]').click();
+    $('#evidence').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setTimeout(() => $('#updateInput').focus(), 350);
   });
 
   $$('.quick-starts [data-start]').forEach(button => button.addEventListener('click', () => {
