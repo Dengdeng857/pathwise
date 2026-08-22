@@ -161,7 +161,7 @@ function finishProgress(message = '路径已更新') {
   setTimeout(() => $('#aiProgress').classList.remove('show'), 850);
 }
 
-async function requestJSON(path, options = {}, timeout = 80000) {
+async function requestJSON(path, options = {}, timeout = 180000) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeout);
   try {
@@ -321,7 +321,7 @@ async function recalculate(successMessage = '路径已经根据新信息更新�
   try {
     const result = await requestJSON('/api/plan', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(profile)
-    }, 40000);
+    }, 180000);
     if (!result.currentRoles || !result.stages) throw new Error('模型返回缺少规划字段');
     plan = { ...result, source: result.source || 'ai' };
     writeJSON(STORAGE.plan, plan);

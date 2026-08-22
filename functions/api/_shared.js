@@ -55,6 +55,8 @@ export async function chat(env, messages, maxTokens = 1800, options = {}) {
         } catch (_) { /* Ignore keep-alive or non-JSON SSE frames. */ }
       }
     }
+    // Some OpenAI-compatible gateways close the SSE stream without a final
+    // [DONE] frame. If deltas were received, the content is still usable.
     if (content.trim()) return content;
     try {
       const payload = JSON.parse(raw);
