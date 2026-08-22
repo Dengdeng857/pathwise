@@ -228,15 +228,14 @@ async function requestStreamingPlan(body) {
       return typeof parsed === 'string' ? JSON.parse(parsed) : parsed;
     };
     try { return parseCandidate(cleaned); } catch (_) {}
-    const start = cleaned.search(/[\[{]/);
-    if (start >= 0) {
-      const opening = cleaned[start];
+    const extractBalanced = (source, start) => {
+      const opening = source[start];
       const closing = opening === '[' ? ']' : '}';
       let depth = 0;
       let quoted = false;
       let escaped = false;
-      for (let index = start; index < cleaned.length; index += 1) {
-        const char = cleaned[index];
+      for (let index = start; index < source.length; index += 1) {
+        const char = source[index];
         if (quoted) {
           if (escaped) escaped = false;
           else if (char === '\\') escaped = true;
@@ -246,8 +245,21 @@ async function requestStreamingPlan(body) {
         if (char === '"') { quoted = true; continue; }
         if (char === opening) depth += 1;
         else if (char === closing) depth -= 1;
-        if (depth === 0) return parseCandidate(cleaned.slice(start, index + 1));
+        if (depth === 0) return source.slice(start, index + 1);
       }
+      return '';
+    };
+    // A few gateways emit an opening brace as one frame and then repeat the
+    // complete JSON object in a later frame. Try every candidate start and
+    // keep the first balanced candidate that parses and has planner fields.
+    for (let start = 0; start < cleaned.length; start += 1) {
+      if (cleaned[start] !== '{' && cleaned[start] !== '[') continue;
+      const candidate = extractBalanced(cleaned, start);
+      if (!candidate) continue;
+      try {
+        const value = parseCandidate(candidate);
+        if (value && (value.profile || value.currentRoles || value.stages)) return value;
+      } catch (_) {}
     }
     console.warn('Pathwise planner raw response prefix:', cleaned.slice(0, 800));
     throw new Error('流式规划返回内容无法解析');
