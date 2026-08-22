@@ -183,6 +183,13 @@ async function requestStreamingPlan(body) {
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '', raw = '', content = '';
+    const appendChunk = (chunk) => {
+      const choice = chunk?.choices?.[0] || {};
+      const delta = choice.delta || {};
+      const message = choice.message || {};
+      const value = delta.content ?? message.content ?? chunk?.content ?? chunk?.text;
+      if (typeof value === 'string') content += value;
+    };
     while (true) {
       const { value, done } = await reader.read();
       if (done) break;
@@ -196,16 +203,27 @@ async function requestStreamingPlan(body) {
         if (!trimmed.startsWith('data:') || trimmed === 'data: [DONE]') continue;
         try {
           const chunk = JSON.parse(trimmed.slice(5).trim());
-          const delta = chunk.choices?.[0]?.delta?.content;
-          if (typeof delta === 'string') content += delta;
+          appendChunk(chunk);
         } catch (_) {}
       }
     }
     if (!content.trim()) {
-      try { content = JSON.parse(raw).choices?.[0]?.message?.content || ''; } catch (_) {}
+      try { appendChunk(JSON.parse(raw)); } catch (_) {
+        for (const line of raw.split(/\r?\n/)) {
+          const value = line.replace(/^\s*data:\s*/, '').trim();
+          if (!value || value === '[DONE]') continue;
+          try { appendChunk(JSON.parse(value)); } catch (_) {}
+        }
+      }
     }
     if (!content.trim()) throw new Error('流式规划没有返回内容');
-    return JSON.parse(content.replace(/^```(?:json)?\s*|\s*```$/g, '').trim());
+    const cleaned = content.replace(/^```(?:json)?\s*|\s*```$/g, '').trim();
+    try { return JSON.parse(cleaned); } catch (_) {
+      const start = cleaned.indexOf('{');
+      const end = cleaned.lastIndexOf('}');
+      if (start >= 0 && end > start) return JSON.parse(cleaned.slice(start, end + 1));
+      throw new Error('流式规划返回内容无法解析');
+    }
   } finally { clearTimeout(timer); }
 }
 
