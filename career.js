@@ -189,6 +189,7 @@ async function requestStreamingPlan(body) {
       const message = choice.message || {};
       const value = delta.content ?? message.content ?? chunk?.content ?? chunk?.text;
       if (typeof value === 'string') content += value;
+      else if (Array.isArray(value)) content += value.map(item => typeof item === 'string' ? item : item?.text || '').join('');
       const reasoning = delta.reasoning_content ?? message.reasoning_content ?? chunk?.reasoning_content;
       if (!content && typeof reasoning === 'string' && reasoning.trim().startsWith('{')) content += reasoning;
     };
@@ -222,12 +223,34 @@ async function requestStreamingPlan(body) {
     // Gateways may return a JSON object followed by usage metadata or a second
     // JSON frame. Keep only the first complete object for the planner.
     const cleaned = content.replace(/^```(?:json)?\s*|\s*```$/g, '').trim();
-    try { return JSON.parse(cleaned); } catch (_) {
-      const start = cleaned.indexOf('{');
-      const end = cleaned.lastIndexOf('}');
-      if (start >= 0 && end > start) return JSON.parse(cleaned.slice(start, end + 1));
-      throw new Error('流式规划返回内容无法解析');
+    const parseCandidate = value => {
+      const parsed = JSON.parse(value);
+      return typeof parsed === 'string' ? JSON.parse(parsed) : parsed;
+    };
+    try { return parseCandidate(cleaned); } catch (_) {}
+    const start = cleaned.search(/[\[{]/);
+    if (start >= 0) {
+      const opening = cleaned[start];
+      const closing = opening === '[' ? ']' : '}';
+      let depth = 0;
+      let quoted = false;
+      let escaped = false;
+      for (let index = start; index < cleaned.length; index += 1) {
+        const char = cleaned[index];
+        if (quoted) {
+          if (escaped) escaped = false;
+          else if (char === '\\') escaped = true;
+          else if (char === '"') quoted = false;
+          continue;
+        }
+        if (char === '"') { quoted = true; continue; }
+        if (char === opening) depth += 1;
+        else if (char === closing) depth -= 1;
+        if (depth === 0) return parseCandidate(cleaned.slice(start, index + 1));
+      }
     }
+    console.warn('Pathwise planner raw response prefix:', cleaned.slice(0, 800));
+    throw new Error('流式规划返回内容无法解析');
   } finally { clearTimeout(timer); }
 }
 
