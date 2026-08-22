@@ -323,16 +323,16 @@ async function recalculate(successMessage = '路径已经根据新信息更新�
     finishProgress();
     showToast('AI 已更新岗位与三阶段路径');
     companionSay(successMessage);
-    setAIStatus(`AI 已连接 · ${plan.source === 'ai' ? '在线规划' : '本地规划'}`, plan.source === 'ai');
+    setAIStatus(plan.source === 'ai' ? 'AI 已连接 · 路径实时更新' : '路径已更新 · 等待智能增强', plan.source === 'ai');
     return true;
   } catch (error) {
     const reason = error.name === 'AbortError' ? '模型响应超时' : error.message;
     plan = makeLocalPlan(profile, reason);
     writeJSON(STORAGE.plan, plan);
     renderAll(plan);
-    finishProgress('已先生成本地路径');
-    showToast('新信息已保存，先使用本地路径');
-    companionSay(`${reason}。你的信息没有丢失，可稍后再次更新。`);
+    finishProgress('已保留当前路径');
+    showToast('新信息已保存，当前路径保持可用');
+    companionSay(`智能规划暂时没有完成响应，但你的信息没有丢失，可以稍后再次更新。`);
     return false;
   }
 }
@@ -385,7 +385,7 @@ async function openActionGuide(action) {
       writeJSON(STORAGE.guides, cache);
     } catch {
       guide = localGuide(action);
-      showToast('已显示本地指导，在线模型恢复后可再次深化');
+      showToast('已显示可执行指导，稍后可再次请求智能深化');
     }
   }
   $('#drawerKicker').textContent = guide.source === 'ai' ? 'AI ACTION GUIDE' : 'ACTION GUIDE';
@@ -422,10 +422,34 @@ async function addUpdate(text) {
 async function addEvidence(content, meta = {}) {
   const text = String(content || '').trim();
   if (!text) return showToast('先粘贴内容或选择一个文件');
-  profile.evidence.push({ type: meta.type || $('#evidenceType').value, filename: meta.filename || '', content: text, addedAt: new Date().toISOString() });
+  const item = { type: meta.type || $('#evidenceType').value, filename: meta.filename || '', content: text, addedAt: new Date().toISOString() };
+  profile.evidence.push(item);
   persistProfile();
   $('#evidenceInput').value = '';
+  await explainEvidence(item);
   await recalculate('材料已进入证据链，岗位与行动路径已经重新判断。');
+}
+
+async function explainEvidence(item) {
+  const box = $('#evidenceInsight');
+  if (!box) return;
+  box.hidden = false;
+  $('#insightProof').textContent = '正在提炼：这份材料证明了什么…';
+  $('#insightGap').textContent = '';
+  $('#insightNext').textContent = '';
+  try {
+    const insight = await requestJSON('/api/evidence-insight', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: item.content, profile })
+    }, 30000);
+    $('#insightProof').textContent = `证明：${(insight.proves || []).join('；') || '暂未提炼出稳定证据'}`;
+    $('#insightGap').textContent = `缺口：${(insight.gaps || []).join('；') || '继续积累外部反馈'}`;
+    $('#insightNext').textContent = `下一步：${insight.next || '补充结果与反馈'}`;
+  } catch {
+    $('#insightProof').textContent = '材料已保存，后续规划会继续参考它。';
+    $('#insightGap').textContent = '';
+    $('#insightNext').textContent = '';
+  }
 }
 
 async function checkHealth() {
@@ -436,12 +460,12 @@ async function checkHealth() {
       setAIStatus(label, true);
       companionSay('在线模型已连接。每次新进展都能重新校准整条路径。');
     } else {
-      setAIStatus('本地规划可用 · 在线模型未配置', false);
-      companionSay('在线模型暂未配置，但画像、行动、证据与本地规划都可以正常使用。');
+      setAIStatus('路径引擎待连接 · 数据不会丢失', false);
+      companionSay('智能规划暂时待连接，但画像、行动和证据仍然可以继续记录。');
     }
   } catch {
-    setAIStatus('本地规划可用 · 服务未连接', false);
-    companionSay('当前使用本地规划。启动 Python 服务后可生成在线 AI 路径。');
+    setAIStatus('路径引擎待连接 · 数据不会丢失', false);
+    companionSay('暂时无法连接智能规划，但你可以继续记录进展，稍后会自动重算。');
   }
 }
 

@@ -24,7 +24,7 @@
       </nav>
       <div class="side-focus"><span class="kicker">NEXT MOVE</span><strong id="focusTitle">完成第一个可验证行动</strong><p id="focusMeta">结果会成为下一次路径判断的依据。</p><button id="sideFocusBtn" type="button">打开行动 <span>→</span></button></div>
       <button class="reset-path" type="button"><span>↻</span> 重置我的路径</button>
-      <div class="user"><div class="avatar" id="avatarText">P</div><div><strong>我的职业路径</strong><small id="userMeta">本地持续保存</small></div><span class="save-dot" title="数据已保存"></span></div>
+      <div class="user"><div class="avatar" id="avatarText">P</div><div><strong>我的职业路径</strong><small id="userMeta">进展自动保存</small></div><span class="save-dot" title="数据已保存"></span></div>
     </aside>
 
     <section class="main">
@@ -43,7 +43,7 @@
           <div class="hero-signal"><i></i><span>PATH ACTIVE</span></div>
           <div class="hero-caption"><span>LIVE 01</span><strong>经历在变化，路径也应该变化。</strong></div>
         </div>
-        <div class="top-meta"><span><i></i> 浏览器本地留存</span><b id="clock">--:--</b></div>
+        <div class="top-meta"><span><i></i> 进展自动保存</span><b id="clock">--:--</b></div>
       </header>
 
       <section class="orientation-strip" aria-label="产品使用方式">
@@ -87,7 +87,7 @@
           <div class="evidence-compose">
             <div class="compose-tabs" role="tablist"><button class="active" type="button" data-compose="update">说一条进展</button><button type="button" data-compose="material">添加材料</button></div>
             <div class="compose-pane active" data-pane="update"><label for="updateInput">最近发生了什么？</label><textarea id="updateInput" rows="4" placeholder="例如：完成一次软件安全面试，发现代码审计案例讲得不够具体"></textarea><div class="quick-updates"><button data-update="完成了一次目标岗位面试" type="button">面试反馈</button><button data-update="完成一个可展示项目" type="button">项目完成</button><button data-update="开始第一段相关实习" type="button">获得实习</button><button data-update="收到一次投递结果" type="button">投递结果</button></div><button class="primary compose-submit" id="addUpdate" type="button">记录并更新路径 <span>↗</span></button></div>
-            <div class="compose-pane" data-pane="material"><label for="evidenceType">这份材料是什么？</label><select id="evidenceType"><option>简历</option><option>面试复盘</option><option>项目成果</option><option>岗位反馈</option><option>行动成果</option></select><textarea id="evidenceInput" rows="3" placeholder="粘贴关键内容，或直接上传 PDF / 文本文档"></textarea><button class="primary compose-submit" id="addEvidence" type="button">分析并调整计划 <span>↗</span></button><label class="upload-evidence"><input id="evidenceFile" type="file" accept=".txt,.md,.pdf,.json,.csv"><span>＋ 选择文件</span><small>线上支持 PDF、TXT、MD、JSON、CSV</small></label><div class="evidence-status" id="evidenceStatus"></div></div>
+            <div class="compose-pane" data-pane="material"><label for="evidenceType">这份材料是什么？</label><select id="evidenceType"><option>简历</option><option>面试复盘</option><option>项目成果</option><option>岗位反馈</option><option>行动成果</option></select><textarea id="evidenceInput" rows="3" placeholder="粘贴关键内容，或直接上传 PDF / 文本文档"></textarea><button class="primary compose-submit" id="addEvidence" type="button">分析并调整计划 <span>↗</span></button><label class="upload-evidence"><input id="evidenceFile" type="file" accept=".txt,.md,.pdf,.json,.csv"><span>＋ 选择文件</span><small>线上支持 PDF、TXT、MD、JSON、CSV</small></label><div class="evidence-status" id="evidenceStatus"></div><div class="evidence-insight" id="evidenceInsight" hidden><span class="kicker">WHAT THIS PROVES</span><div><strong id="insightProof">—</strong><strong id="insightGap">—</strong><strong id="insightNext">—</strong></div></div></div>
           </div>
           <div class="activity-stream"><div class="stream-head"><span>PATH ACTIVITY</span><small id="activityCount">0 条记录</small></div><div class="update-list" id="updateList"></div></div>
         </div>
