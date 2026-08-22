@@ -443,6 +443,21 @@ function bindEvents() {
     }
   });
 
+  $$('.quick-starts [data-start]').forEach(button => button.addEventListener('click', () => {
+    const mode = button.dataset.start;
+    if (mode === 'profile') {
+      $('#editProfile').click();
+      return;
+    }
+    $(`[data-compose="${mode === 'resume' ? 'material' : 'update'}"]`).click();
+    $('#evidence').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (mode === 'resume') {
+      setTimeout(() => $('#evidenceFile').click(), 450);
+    } else {
+      setTimeout(() => $('#updateInput').focus(), 450);
+    }
+  }));
+
   $('#compareBtn').addEventListener('click', () => openDrawer({
     kicker: 'MATCH EXPLAINER', title: '匹配度不是录取概率', intro: '它只表达当前证据与岗位要求的重合程度。',
     content: '<div class="guide-block"><strong>01</strong><p>现在可投：以现有经历判断现实入口。</p></div><div class="guide-block"><strong>02</strong><p>毕业落点：考虑毕业前可以合理补齐的能力和经历。</p></div><div class="guide-block"><strong>03</strong><p>进阶选择：需要额外实习、项目结果或更强竞争背书。</p></div>'
