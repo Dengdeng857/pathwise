@@ -12,6 +12,18 @@ export function modelConfig(env) {
   };
 }
 
+export async function upstreamChat(env, messages, maxTokens = 1800) {
+  const config = modelConfig(env);
+  if (!config.key) throw new Error('AI Key 未配置');
+  const response = await fetch(`${config.base}/chat/completions`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${config.key}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model: config.model, messages, temperature: 0.2, max_tokens: maxTokens, enable_thinking: false, stream: true })
+  });
+  if (!response.ok || !response.body) throw new Error(`模型服务返回 ${response.status}`);
+  return response;
+}
+
 export async function chat(env, messages, maxTokens = 1800, options = {}) {
   const config = modelConfig(env);
   if (!config.key) throw new Error('AI Key 未配置');

@@ -174,6 +174,41 @@ async function requestJSON(path, options = {}, timeout = 180000) {
   }
 }
 
+async function requestStreamingPlan(body) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 180000);
+  try {
+    const response = await fetch(api('/api/plan'), { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' }, body: JSON.stringify(body), signal: controller.signal });
+    if (!response.ok || !response.body) throw new Error(`HTTP ${response.status}`);
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '', raw = '', content = '';
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      const text = decoder.decode(value, { stream: true });
+      raw += text;
+      buffer += text;
+      const lines = buffer.split(/\r?\n/);
+      buffer = lines.pop() || '';
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith('data:') || trimmed === 'data: [DONE]') continue;
+        try {
+          const chunk = JSON.parse(trimmed.slice(5).trim());
+          const delta = chunk.choices?.[0]?.delta?.content;
+          if (typeof delta === 'string') content += delta;
+        } catch (_) {}
+      }
+    }
+    if (!content.trim()) {
+      try { content = JSON.parse(raw).choices?.[0]?.message?.content || ''; } catch (_) {}
+    }
+    if (!content.trim()) throw new Error('流式规划没有返回内容');
+    return JSON.parse(content.replace(/^```(?:json)?\s*|\s*```$/g, '').trim());
+  } finally { clearTimeout(timer); }
+}
+
 function profileCompleteness() {
   const basics = ['stage', 'school', 'major', 'target', 'experience'].filter(key => String(profile[key] || '').trim()).length;
   const evidenceScore = Math.min(25, profile.evidence.length * 7);
@@ -319,9 +354,8 @@ function persistProfile() {
 async function recalculate(successMessage = '路径已经根据新信息更新。') {
   startProgress();
   try {
-    const result = await requestJSON('/api/plan', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(profile)
-    }, 180000);
+    const result = await requestStreamingPlan(profile);
+    if (!result.currentRoles || !result.stages) throw new Error('模型返回缺少规划字段');
     if (!result.currentRoles || !result.stages) throw new Error('模型返回缺少规划字段');
     plan = { ...result, source: result.source || 'ai' };
     writeJSON(STORAGE.plan, plan);
