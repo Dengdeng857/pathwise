@@ -189,6 +189,8 @@ async function requestStreamingPlan(body) {
       const message = choice.message || {};
       const value = delta.content ?? message.content ?? chunk?.content ?? chunk?.text;
       if (typeof value === 'string') content += value;
+      const reasoning = delta.reasoning_content ?? message.reasoning_content ?? chunk?.reasoning_content;
+      if (!content && typeof reasoning === 'string' && reasoning.trim().startsWith('{')) content += reasoning;
     };
     while (true) {
       const { value, done } = await reader.read();
@@ -217,6 +219,8 @@ async function requestStreamingPlan(body) {
       }
     }
     if (!content.trim()) throw new Error('流式规划没有返回内容');
+    // Gateways may return a JSON object followed by usage metadata or a second
+    // JSON frame. Keep only the first complete object for the planner.
     const cleaned = content.replace(/^```(?:json)?\s*|\s*```$/g, '').trim();
     try { return JSON.parse(cleaned); } catch (_) {
       const start = cleaned.indexOf('{');
@@ -391,6 +395,7 @@ async function recalculate(successMessage = '路径已经根据新信息更新�
     finishProgress('已保留当前路径');
     showToast('新信息已保存，当前路径保持可用');
     companionSay(`智能规划暂时没有完成响应，但你的信息没有丢失，可以稍后再次更新。`);
+    console.warn('Pathwise plan request failed:', error);
     return false;
   }
 }

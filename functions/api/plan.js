@@ -10,7 +10,26 @@ export async function onRequestPost({ request, env }) {
     }];
     if (request.headers.get('Accept')?.includes('text/event-stream')) {
       const upstream = await upstreamChat(env, messages, 2000);
-      return new Response(upstream.body, { status: 200, headers: { 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-cache, no-transform', 'X-Accel-Buffering': 'no' } });
+      const { readable, writable } = new TransformStream();
+      const writer = writable.getWriter();
+      const reader = upstream.body.getReader();
+      const encoder = new TextEncoder();
+      const heartbeat = setInterval(() => writer.write(encoder.encode(': pathwise-heartbeat\n\n')).catch(() => {}), 8000);
+      (async () => {
+        try {
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            await writer.write(value);
+          }
+        } catch (error) {
+          await writer.write(encoder.encode(`event: error\ndata: ${JSON.stringify({ error: String(error.message || error) })}\n\n`)).catch(() => {});
+        } finally {
+          clearInterval(heartbeat);
+          await writer.close().catch(() => {});
+        }
+      })();
+      return new Response(readable, { status: 200, headers: { 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-cache, no-transform', 'X-Accel-Buffering': 'no', Connection: 'keep-alive' } });
     }
     const content = await chat(env, messages, 2000, { stream: true });
     const result = parseModelJson(content);
