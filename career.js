@@ -68,6 +68,8 @@ if (plan) {
 }
 let completedTasks = new Set(readJSON(STORAGE.tasks, []));
 let activeTask = '';
+let selectedEvidenceFile = null;
+let evidenceFileRequest = null;
 let progressTimer = null;
 let toastTimer = null;
 
@@ -319,7 +321,7 @@ async function recalculate(successMessage = '路径已经根据新信息更新�
   try {
     const result = await requestJSON('/api/plan', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(profile)
-    });
+    }, 40000);
     if (!result.currentRoles || !result.stages) throw new Error('模型返回缺少规划字段');
     plan = { ...result, source: result.source || 'ai' };
     writeJSON(STORAGE.plan, plan);
@@ -384,7 +386,7 @@ async function openActionGuide(action) {
     try {
       guide = await requestJSON('/api/action-guide', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, profile })
-      }, 45000);
+      }, 25000);
       cache[action] = guide;
       writeJSON(STORAGE.guides, cache);
     } catch {
@@ -432,6 +434,21 @@ async function addEvidence(content, meta = {}) {
   $('#evidenceInput').value = '';
   await explainEvidence(item);
   await recalculate('材料已进入证据链，岗位与行动路径已经重新判断。');
+}
+
+async function parseSelectedEvidenceFile(file) {
+  if (!file) return false;
+  const status = $('#evidenceStatus');
+  status.className = 'evidence-status';
+  status.textContent = `正在解析 ${file.name}…`;
+  const body = new FormData();
+  body.append('file', file);
+  const parsed = await requestJSON('/api/evidence', { method: 'POST', body }, 45000);
+  if (!String(parsed.text || '').trim()) throw new Error('没有提取到可分析的内容');
+  status.textContent = '解析完成，正在根据材料调整路径…';
+  await addEvidence(parsed.text, { type: $('#evidenceType').value, filename: file.name });
+  status.textContent = '材料已保存，计划已完成一次更新。';
+  return true;
 }
 
 async function explainEvidence(item) {
@@ -563,26 +580,40 @@ function bindEvents() {
     $('#updateInput').value = button.dataset.update;
     $('#updateInput').focus();
   }));
-  $('#addEvidence').addEventListener('click', () => addEvidence($('#evidenceInput').value));
+  $('#addEvidence').addEventListener('click', async () => {
+    if (evidenceFileRequest) {
+      showToast('材料正在解析，请稍候');
+      return evidenceFileRequest;
+    }
+    if (selectedEvidenceFile) {
+      evidenceFileRequest = parseSelectedEvidenceFile(selectedEvidenceFile);
+      try { await evidenceFileRequest; } catch (error) {
+        $('#evidenceStatus').className = 'evidence-status error';
+        $('#evidenceStatus').textContent = `解析失败：${error.message}`;
+        showToast('材料没有写入证据链，请检查文件后重试');
+      } finally { evidenceFileRequest = null; selectedEvidenceFile = null; }
+      return;
+    }
+    const typedEvidence = $('#evidenceInput').value.trim();
+    if (!typedEvidence && profile.evidence.length) {
+      showToast('这份材料已经分析过了，结果已进入证据链');
+      return;
+    }
+    await addEvidence(typedEvidence);
+  });
 
   $('#evidenceFile').addEventListener('change', async event => {
     const file = event.target.files[0];
     if (!file) return;
-    const status = $('#evidenceStatus');
-    status.className = 'evidence-status';
-    status.textContent = `正在解析 ${file.name}…`;
-    try {
-      const body = new FormData();
-      body.append('file', file);
-      const parsed = await requestJSON('/api/evidence', { method: 'POST', body }, 45000);
-      status.textContent = '解析完成，正在根据材料调整路径…';
-      await addEvidence(parsed.text, { type: $('#evidenceType').value, filename: file.name });
-      status.textContent = '材料已保存，计划已完成一次更新。';
-    } catch (error) {
-      status.className = 'evidence-status error';
-      status.textContent = `解析失败：${error.message}`;
+    selectedEvidenceFile = file;
+    evidenceFileRequest = parseSelectedEvidenceFile(file);
+    try { await evidenceFileRequest; } catch (error) {
+      $('#evidenceStatus').className = 'evidence-status error';
+      $('#evidenceStatus').textContent = `解析失败：${error.message}`;
       showToast('材料没有写入证据链，请检查文件后重试');
     } finally {
+      evidenceFileRequest = null;
+      selectedEvidenceFile = null;
       event.target.value = '';
     }
   });

@@ -12,7 +12,7 @@ export function modelConfig(env) {
   };
 }
 
-export async function chat(env, messages, maxTokens = 1800) {
+export async function chat(env, messages, maxTokens = 1800, options = {}) {
   const config = modelConfig(env);
   if (!config.key) throw new Error('AI Key 未配置');
   const response = await fetch(`${config.base}/chat/completions`, {
@@ -27,10 +27,42 @@ export async function chat(env, messages, maxTokens = 1800) {
       temperature: 0.2,
       max_tokens: maxTokens,
       enable_thinking: false,
-      stream: false
-    })
+      stream: Boolean(options.stream)
+    }
   });
   if (!response.ok) throw new Error(`模型服务返回 ${response.status}`);
+  if (options.stream && response.body) {
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let content = '';
+    let raw = '';
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      const chunkText = decoder.decode(value, { stream: true });
+      raw += chunkText;
+      buffer += chunkText;
+      const lines = buffer.split(/\r?\n/);
+      buffer = lines.pop() || '';
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith('data:') || trimmed === 'data: [DONE]') continue;
+        try {
+          const chunk = JSON.parse(trimmed.slice(5).trim());
+          const delta = chunk.choices?.[0]?.delta?.content;
+          if (typeof delta === 'string') content += delta;
+        } catch (_) { /* Ignore keep-alive or non-JSON SSE frames. */ }
+      }
+    }
+    if (content.trim()) return content;
+    try {
+      const payload = JSON.parse(raw);
+      return payload.choices?.[0]?.message?.content || '';
+    } catch (_) {
+      throw new Error('流式模型响应为空或格式无法识别');
+    }
+  }
   const payload = await response.json();
   return payload.choices?.[0]?.message?.content || '';
 }
