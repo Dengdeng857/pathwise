@@ -28,7 +28,7 @@ export async function chat(env, messages, maxTokens = 1800, options = {}) {
       max_tokens: maxTokens,
       enable_thinking: false,
       stream: Boolean(options.stream)
-    }
+    })
   });
   if (!response.ok) throw new Error(`模型服务返回 ${response.status}`);
   if (options.stream && response.body) {
