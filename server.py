@@ -85,7 +85,7 @@ def curl_chat(base, key, payload, timeout):
 
 def compact_profile(profile):
     compact={}
-    for key in ('stage','school','major','target'):
+    for key in ('stage','school','major','target','mood'):
         compact[key]=str(profile.get(key,'')).strip()[:300]
     compact['experience']=str(profile.get('experience','')).strip()[:4000]
     compact['updates']=[str(item)[:800] for item in profile.get('updates',[])[-12:]]

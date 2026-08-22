@@ -119,6 +119,11 @@ a { color: inherit; text-decoration: none; }
 .pulse-cta { margin-top: 14px; border: 0; padding: 0; background: transparent; color: var(--green); font-size: 10px; font-weight: 800; cursor: pointer; }
 .pulse-cta span { display: inline-block; margin-left: 7px; transition: transform .18s; }
 .pulse-cta:hover span { transform: translateX(3px); }
+.checkin { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 17px; }
+.checkin > span { margin-right: 3px; color: var(--muted); font-size: 9px; }
+.checkin button { border: 1px solid #c9ddd5; border-radius: 14px; padding: 5px 8px; background: rgba(255,255,255,.55); color: var(--nav-2); font-size: 8px; cursor: pointer; }
+.checkin button:hover, .checkin button.selected { border-color: var(--green); background: #d6eee3; color: var(--green); }
+.checkin small { width: 100%; color: var(--muted); font-size: 8px; }
 .pulse-signals { display: grid; grid-template-columns: repeat(3, 1fr); align-items: center; border-left: 1px solid #cfe1da; }
 .pulse-signals div { min-width: 0; padding: 0 16px; border-right: 1px solid #cfe1da; }
 .pulse-signals div:last-child { border-right: 0; }

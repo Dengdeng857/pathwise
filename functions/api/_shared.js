@@ -45,6 +45,7 @@ export function compactProfile(profile = {}) {
     school: String(profile.school || '').slice(0, 120),
     major: String(profile.major || '').slice(0, 120),
     target: String(profile.target || '').slice(0, 160),
+    mood: String(profile.mood || '').slice(0, 80),
     experience: String(profile.experience || '').slice(0, 3000),
     updates: (profile.updates || []).slice(-10).map(item => String(item).slice(0, 600)),
     evidence: (profile.evidence || []).slice(-6).map(item => ({

@@ -59,6 +59,7 @@ profile.updates = unique(profile.updates.map(String).filter(update => {
     return (content && text.includes(content.slice(0, Math.min(80, content.length)))) || (filename && text.includes(filename));
   });
 }));
+profile.mood = profile.mood || '';
 let plan = readJSON(STORAGE.plan, null);
 if (plan) {
   const planText = JSON.stringify([plan.profile, plan.summary, plan.currentRoles, plan.graduationRoles]);
@@ -202,6 +203,9 @@ function renderDecision(currentPlan) {
   $('#pulseUpdate').textContent = profile.evidence.length ? '材料已进入' : '等你记录';
   $('#decisionCta').textContent = next ? '打开这一步 →' : '记录新进展 →';
   $('#decisionCta').dataset.task = next?.dataset.task || '';
+  const moodText = { steady: '今天按一个小步推进就很好。', anxious: '先只做最小的一步，不需要今天解决全部问题。', tired: '今天可以只整理材料，完成比强撑更重要。' }[profile.mood] || '';
+  $('#moodNote').textContent = moodText;
+  $$('.checkin button').forEach(button => button.classList.toggle('selected', button.dataset.mood === profile.mood));
 }
 
 function pickRoles(currentPlan) {
@@ -490,6 +494,14 @@ function bindEvents() {
     $('#evidence').scrollIntoView({ behavior: 'smooth', block: 'start' });
     setTimeout(() => $('#updateInput').focus(), 350);
   });
+
+  $$('.checkin button').forEach(button => button.addEventListener('click', () => {
+    profile.mood = button.dataset.mood;
+    persistProfile();
+    const message = { steady: '收到。今天保持一个可完成的小步。', anxious: '收到。我们把目标拆小，不用一次证明自己。', tired: '收到。今天先保留体力，整理材料也算推进。' }[profile.mood];
+    companionSay(message);
+    showToast('今天的节奏已记录');
+  }));
 
   $$('.quick-starts [data-start]').forEach(button => button.addEventListener('click', () => {
     const mode = button.dataset.start;
