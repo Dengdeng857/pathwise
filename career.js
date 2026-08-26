@@ -183,7 +183,7 @@ async function requestStreamingPlan(body) {
     if (!response.ok || !response.body) throw new Error(`HTTP ${response.status}`);
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
-    let buffer = '', raw = '', content = '';
+    let buffer = '', raw = '', content = '', finishReason = '';
     const appendChunk = (chunk) => {
       // Some OpenAI-compatible gateways emit the planner object itself as an
       // SSE data frame instead of wrapping it in choices[].
@@ -192,6 +192,7 @@ async function requestStreamingPlan(body) {
         return;
       }
       const choice = chunk?.choices?.[0] || {};
+      if (choice.finish_reason) finishReason = choice.finish_reason;
       const delta = choice.delta || {};
       const message = choice.message || {};
       const value = delta.content ?? message.content ?? chunk?.output_text ?? chunk?.content ?? chunk?.text;
@@ -275,7 +276,7 @@ async function requestStreamingPlan(body) {
       } catch (_) {}
     }
     console.warn('Pathwise planner raw response prefix:', cleaned.slice(0, 800));
-    throw new Error('流式规划返回内容无法解析');
+    throw new Error(finishReason === 'length' ? '模型输出达到长度上限，规划 JSON 未完整返回' : '流式规划返回内容无法解析');
   } finally { clearTimeout(timer); }
 }
 
