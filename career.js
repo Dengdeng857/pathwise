@@ -70,6 +70,7 @@ let completedTasks = new Set(readJSON(STORAGE.tasks, []));
 let activeTask = '';
 let selectedEvidenceFile = null;
 let evidenceFileRequest = null;
+let pendingResume = null;
 let progressTimer = null;
 let toastTimer = null;
 
@@ -184,10 +185,16 @@ async function requestStreamingPlan(body) {
     const decoder = new TextDecoder();
     let buffer = '', raw = '', content = '';
     const appendChunk = (chunk) => {
+      // Some OpenAI-compatible gateways emit the planner object itself as an
+      // SSE data frame instead of wrapping it in choices[].
+      if (chunk && typeof chunk === 'object' && (chunk.profile || chunk.currentRoles || chunk.stages)) {
+        content += JSON.stringify(chunk);
+        return;
+      }
       const choice = chunk?.choices?.[0] || {};
       const delta = choice.delta || {};
       const message = choice.message || {};
-      const value = delta.content ?? message.content ?? chunk?.content ?? chunk?.text;
+      const value = delta.content ?? message.content ?? chunk?.output_text ?? chunk?.content ?? chunk?.text;
       if (typeof value === 'string') content += value;
       else if (Array.isArray(value)) content += value.map(item => typeof item === 'string' ? item : item?.text || '').join('');
       const reasoning = delta.reasoning_content ?? message.reasoning_content ?? chunk?.reasoning_content;
@@ -209,6 +216,12 @@ async function requestStreamingPlan(body) {
           appendChunk(chunk);
         } catch (_) {}
       }
+    }
+    // A proxy may close immediately after the final frame without a newline;
+    // process that buffered frame before deciding the response is empty.
+    const finalLine = buffer.trim();
+    if (finalLine.startsWith('data:') && finalLine !== 'data: [DONE]') {
+      try { appendChunk(JSON.parse(finalLine.slice(5).trim())); } catch (_) {}
     }
     if (!content.trim()) {
       try { appendChunk(JSON.parse(raw)); } catch (_) {
@@ -537,10 +550,39 @@ async function parseSelectedEvidenceFile(file) {
   body.append('file', file);
   const parsed = await requestJSON('/api/evidence', { method: 'POST', body }, 45000);
   if (!String(parsed.text || '').trim()) throw new Error('没有提取到可分析的内容');
+  if ($('#evidenceType').value === '简历') {
+    const extracted = await requestJSON('/api/profile-extract', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: parsed.text, profile })
+    }, 60000);
+    pendingResume = { extracted, text: parsed.text, filename: file.name };
+    renderResumeReview(extracted);
+    openModal($('#resumeReviewModal'));
+    status.textContent = '已识别简历信息，请确认是否更新画像。';
+    return true;
+  }
   status.textContent = '解析完成，正在根据材料调整路径…';
   await addEvidence(parsed.text, { type: $('#evidenceType').value, filename: file.name });
   status.textContent = '材料已保存，计划已完成一次更新。';
   return true;
+}
+
+function renderResumeReview(extracted = {}) {
+  const labels = { stage: '当前阶段', school: '学校层次', major: '专业', target: '目标岗位', experience: '经历摘要' };
+  const fields = ['stage', 'school', 'major', 'experience'];
+  $('#resumeReviewList').innerHTML = fields.map(key => `<label class="resume-review-row"><input type="checkbox" data-resume-field="${key}" checked><span><small>${labels[key]}</small><strong>${escapeHtml(extracted[key] || '未识别')}</strong></span></label>`).join('') + `<div class="resume-target-note"><span>当前目标岗位</span><strong>${escapeHtml(profile.target || '未填写')}</strong><small>默认保留，不会被简历自动覆盖</small></div>`;
+}
+
+async function confirmResumeProfile() {
+  if (!pendingResume) return closeModal($('#resumeReviewModal'));
+  const extracted = pendingResume.extracted || {};
+  const fields = $$('.resume-review-row input:checked').map(input => input.dataset.resumeField);
+  fields.forEach(field => { if (extracted[field]) profile[field] = extracted[field]; });
+  profile.evidence.push({ type: '简历', filename: pendingResume.filename, content: pendingResume.text, addedAt: new Date().toISOString() });
+  persistProfile();
+  closeModal($('#resumeReviewModal'));
+  pendingResume = null;
+  await recalculate('简历信息已经确认，画像和岗位路径同步更新。');
 }
 
 async function explainEvidence(item) {
@@ -709,6 +751,7 @@ function bindEvents() {
       event.target.value = '';
     }
   });
+  $('#resumeReviewConfirm').addEventListener('click', confirmResumeProfile);
 
   const openProfile = () => { fillProfileForm(); openModal($('#profileModal')); };
   $('#editProfile').addEventListener('click', openProfile);
@@ -748,7 +791,7 @@ function bindEvents() {
   });
   $('#closeDrawer').addEventListener('click', () => closeModal($('#drawer')));
 
-  $$('.modal-close, .outcome-cancel, .reset-cancel').forEach(button => button.addEventListener('click', () => closeModal(button.closest('.modal-backdrop'))));
+  $$('.modal-close, .outcome-cancel, .reset-cancel, .resume-review-cancel').forEach(button => button.addEventListener('click', () => closeModal(button.closest('.modal-backdrop'))));
   $$('.modal-backdrop, .drawer-backdrop').forEach(backdrop => backdrop.addEventListener('click', event => { if (event.target === backdrop) closeModal(backdrop); }));
 
   $('.reset-path').addEventListener('click', () => openModal($('#resetModal')));
