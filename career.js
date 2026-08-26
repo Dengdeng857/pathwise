@@ -751,12 +751,12 @@ function bindEvents() {
       event.target.value = '';
     }
   });
-  $('#resumeReviewConfirm').addEventListener('click', confirmResumeProfile);
+  $('#resumeReviewConfirm')?.addEventListener('click', confirmResumeProfile);
 
   const openProfile = () => { fillProfileForm(); openModal($('#profileModal')); };
   $('#editProfile').addEventListener('click', openProfile);
   $('.profile-edit-inline').addEventListener('click', openProfile);
-  $('#modalResumeBtn').addEventListener('click', () => {
+  $('#modalResumeBtn')?.addEventListener('click', () => {
     closeModal($('#profileModal'));
     const materialTab = $('[data-compose="material"]');
     materialTab.click();

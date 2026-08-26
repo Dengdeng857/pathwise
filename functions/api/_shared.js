@@ -5,11 +5,43 @@ export function json(data, status = 200) {
 }
 
 export function modelConfig(env) {
+  const explicitBase = String(env.AI_BASE_URL || '').replace(/\/$/, '');
+  const provider = explicitBase.includes('api.openai.com')
+    ? 'openai'
+    : explicitBase.includes('dashscope.aliyuncs.com')
+      ? 'dashscope'
+      : explicitBase
+        ? 'compatible'
+        : env.OPENAI_API_KEY
+          ? 'openai'
+          : env.MODELSNEXUS_API_KEY
+            ? 'compatible'
+            : env.DASHSCOPE_API_KEY
+              ? 'dashscope'
+              : 'compatible';
+  const defaults = {
+    openai: { base: 'https://api.openai.com/v1', model: 'gpt-4.1-mini', key: env.OPENAI_API_KEY },
+    dashscope: { base: 'https://dashscope.aliyuncs.com/compatible-mode/v1', model: 'qwen-plus', key: env.DASHSCOPE_API_KEY },
+    compatible: { base: 'https://modelsnexus.org/v1', model: 'qwen3.7-max', key: env.MODELSNEXUS_API_KEY }
+  }[provider];
   return {
-    key: env.MODELSNEXUS_API_KEY || env.DASHSCOPE_API_KEY || env.OPENAI_API_KEY,
-    base: (env.AI_BASE_URL || 'https://modelsnexus.org/v1').replace(/\/$/, ''),
-    model: env.AI_MODEL || 'qwen3.7-max'
+    provider,
+    key: defaults.key,
+    base: explicitBase || defaults.base,
+    model: env.AI_MODEL || defaults.model
   };
+}
+
+function chatBody(config, messages, maxTokens, stream) {
+  const body = {
+    model: config.model,
+    messages,
+    temperature: 0.2,
+    max_tokens: maxTokens,
+    stream
+  };
+  if (config.provider !== 'openai') body.enable_thinking = false;
+  return body;
 }
 
 export async function upstreamChat(env, messages, maxTokens = 1800) {
@@ -18,7 +50,7 @@ export async function upstreamChat(env, messages, maxTokens = 1800) {
   const response = await fetch(`${config.base}/chat/completions`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${config.key}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: config.model, messages, temperature: 0.2, max_tokens: maxTokens, enable_thinking: false, stream: true })
+    body: JSON.stringify(chatBody(config, messages, maxTokens, true))
   });
   if (!response.ok || !response.body) throw new Error(`模型服务返回 ${response.status}`);
   return response;
@@ -33,14 +65,7 @@ export async function chat(env, messages, maxTokens = 1800, options = {}) {
       Authorization: `Bearer ${config.key}`,
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({
-      model: config.model,
-      messages,
-      temperature: 0.2,
-      max_tokens: maxTokens,
-      enable_thinking: false,
-      stream: Boolean(options.stream)
-    })
+    body: JSON.stringify(chatBody(config, messages, maxTokens, Boolean(options.stream)))
   });
   if (!response.ok) throw new Error(`模型服务返回 ${response.status}`);
   if (options.stream && response.body) {

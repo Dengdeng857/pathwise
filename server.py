@@ -103,15 +103,18 @@ def compact_profile(profile):
     return compact
 
 def make_plan(profile):
-    nexus_key=os.environ.get('MODELSNEXUS_API_KEY'); qwen_key=os.environ.get('DASHSCOPE_API_KEY'); key=nexus_key or qwen_key or os.environ.get('OPENAI_API_KEY')
-    base=os.environ.get('AI_BASE_URL') or (DEFAULT_BASE_URL if nexus_key else ('https://dashscope.aliyuncs.com/compatible-mode/v1' if qwen_key else 'https://api.openai.com/v1'))
-    model=os.environ.get('AI_MODEL') or (DEFAULT_MODEL if nexus_key else ('qwen-plus' if qwen_key else 'gpt-4o-mini'))
+    nexus_key=os.environ.get('MODELSNEXUS_API_KEY'); qwen_key=os.environ.get('DASHSCOPE_API_KEY'); openai_key=os.environ.get('OPENAI_API_KEY')
+    base=os.environ.get('AI_BASE_URL') or ('https://api.openai.com/v1' if openai_key else (DEFAULT_BASE_URL if nexus_key else 'https://dashscope.aliyuncs.com/compatible-mode/v1'))
+    is_openai='api.openai.com' in base
+    key=openai_key if is_openai else (qwen_key if 'dashscope.aliyuncs.com' in base else nexus_key)
+    model=os.environ.get('AI_MODEL') or ('gpt-4.1-mini' if is_openai else ('qwen-plus' if 'dashscope.aliyuncs.com' in base else DEFAULT_MODEL))
     if not key: return local_plan(profile,'未配置 API Key')
     schema='''只返回 JSON，不要 Markdown。结构必须为：{"profile":"string","summary":"string","currentRoles":[{"title":"string","match":0,"reason":"string"}],"graduationRoles":[{"title":"string","match":0,"reason":"string"}],"gaps":["string"],"actions":["string"],"actionGuides":[{"title":"string","why":"string","steps":["string","string","string"],"doneWhen":"string"}],"stages":[{"title":"string","why":"string","tasks":["string","string","string"],"doneWhen":"string"}]}。match 为 0-100 的整数，不要伪造录取概率。'''
     model_profile=compact_profile(profile)
     prompt=f'你是可信的应届生职业规划产品。根据用户画像、最近进展和证据材料，重新判断现在可投和毕业可达岗位。材料不是存档：必须说明它确认了什么能力、暴露了什么缺口，以及计划哪些阶段需要调整。最近进展中的明确事实优先级高于旧画像：如果用户说目标已转向某岗位，必须把 profile、currentRoles、graduationRoles、stages 全部改成新目标。面试失败要转成具体复盘缺口，而不是继续推荐旧方向。回答精炼，每个字段只保留对求职决策有用的信息。{schema}\n用户画像：{json.dumps(model_profile,ensure_ascii=False)}'
     try:
-        payload={'model':model,'messages':[{'role':'user','content':prompt}],'temperature':0.2,'max_tokens':1600,'enable_thinking':False,'stream':False}
+        payload={'model':model,'messages':[{'role':'user','content':prompt}],'temperature':0.2,'max_tokens':1600,'stream':False}
+        if not is_openai: payload['enable_thinking']=False
         req=Request(base.rstrip('/')+'/chat/completions',data=json.dumps(payload).encode(),headers={'Authorization':'Bearer '+key,'Content-Type':'application/json'})
         if os.environ.get('AI_TRANSPORT','curl').lower() == 'curl':
             raw=curl_chat(base,key,payload,max(180.0,min(float(os.environ.get('AI_TIMEOUT',DEFAULT_TIMEOUT)),240.0)))
@@ -158,14 +161,17 @@ def make_action_guide(payload):
     action=str(payload.get('action') or '').strip()[:300]
     if not action:
         return local_action_guide('完成当前行动',profile,'缺少行动名称')
-    nexus_key=os.environ.get('MODELSNEXUS_API_KEY'); qwen_key=os.environ.get('DASHSCOPE_API_KEY'); key=nexus_key or qwen_key or os.environ.get('OPENAI_API_KEY')
-    base=os.environ.get('AI_BASE_URL') or (DEFAULT_BASE_URL if nexus_key else ('https://dashscope.aliyuncs.com/compatible-mode/v1' if qwen_key else 'https://api.openai.com/v1'))
-    model=os.environ.get('AI_MODEL') or (DEFAULT_MODEL if nexus_key else ('qwen-plus' if qwen_key else 'gpt-4o-mini'))
+    nexus_key=os.environ.get('MODELSNEXUS_API_KEY'); qwen_key=os.environ.get('DASHSCOPE_API_KEY'); openai_key=os.environ.get('OPENAI_API_KEY')
+    base=os.environ.get('AI_BASE_URL') or ('https://api.openai.com/v1' if openai_key else (DEFAULT_BASE_URL if nexus_key else 'https://dashscope.aliyuncs.com/compatible-mode/v1'))
+    is_openai='api.openai.com' in base
+    key=openai_key if is_openai else (qwen_key if 'dashscope.aliyuncs.com' in base else nexus_key)
+    model=os.environ.get('AI_MODEL') or ('gpt-4.1-mini' if is_openai else ('qwen-plus' if 'dashscope.aliyuncs.com' in base else DEFAULT_MODEL))
     if not key:
         return local_action_guide(action,profile,'未配置 API Key')
     schema='''只返回 JSON，不要 Markdown。结构必须为：{"title":"string","why":"string","steps":["string"],"resources":["string"],"estimatedTime":"string","doneWhen":"string","evidence":"string"}。steps 必须是 3-5 个具体动作；不得虚构链接、招聘信息或用户经历。'''
     prompt=f'''你是应届生职业行动教练。请只深化一个行动项，不要重新生成整份职业规划。指导必须结合用户阶段、目标岗位、已有经历、最近进展和证据；写到用户现在就能照着做的程度。{schema}\n行动项：{action}\n用户画像：{json.dumps(profile,ensure_ascii=False)}'''
-    request_payload={'model':model,'messages':[{'role':'user','content':prompt}],'temperature':0.2,'max_tokens':900,'enable_thinking':False,'stream':False}
+    request_payload={'model':model,'messages':[{'role':'user','content':prompt}],'temperature':0.2,'max_tokens':900,'stream':False}
+    if not is_openai: request_payload['enable_thinking']=False
     try:
         raw=curl_chat(base,key,request_payload,max(60.0,min(float(os.environ.get('ACTION_GUIDE_TIMEOUT',90)),120.0)))
         content=raw['choices'][0]['message']['content']; fence=chr(96)*3

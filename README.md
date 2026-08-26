@@ -19,14 +19,16 @@ python3 server.py
 
 打开 `http://127.0.0.1:8787/career.html`。
 
-模型配置放在项目根目录 `.env`，不要提交到 Git：
+模型配置放在项目根目录 `.env`，不要提交到 Git。使用 OpenAI 时：
 
 ```bash
-MODELSNEXUS_API_KEY=your_key
-AI_BASE_URL=https://modelsnexus.org/v1
-AI_MODEL=qwen3.7-max
+OPENAI_API_KEY=your_key
+AI_BASE_URL=https://api.openai.com/v1
+AI_MODEL=gpt-4.1-mini
 AI_TRANSPORT=curl
 ```
+
+也可以继续使用 OpenAI 兼容网关；将 Key、`AI_BASE_URL` 和 `AI_MODEL` 改成该平台提供的值即可。
 
 没有模型 Key 时，产品会使用本地规划和本地行动指导，完整交互仍可演示。
 
@@ -53,8 +55,8 @@ git push -u origin main
 2. 选择 GitHub 中的 `pathwise` 仓库。
 3. Framework preset 选择 `None`。
 4. Build command 留空，Build output directory 填 `/`。
-5. 在 **Settings → Variables and Secrets** 添加加密 Secret `MODELSNEXUS_API_KEY`。
-6. 可选添加 `AI_BASE_URL=https://modelsnexus.org/v1` 和 `AI_MODEL=qwen3.7-max`。
+5. 在 **Settings → Variables and Secrets** 添加加密 Secret `OPENAI_API_KEY`。
+6. 添加文本变量 `AI_BASE_URL=https://api.openai.com/v1` 和 `AI_MODEL=gpt-4.1-mini`。
 
 重新部署后访问 `https://YOUR_PROJECT.pages.dev/`。
 
