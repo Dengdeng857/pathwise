@@ -316,6 +316,22 @@ function renderDecision(currentPlan) {
   $$('.checkin button').forEach(button => button.classList.toggle('selected', button.dataset.mood === profile.mood));
 }
 
+function renderPathLab(currentPlan) {
+  const roles = pickRoles(currentPlan || makeLocalPlan()).filter(Boolean);
+  const choices = roles.length ? roles : [{ title: profile.target || '目标岗位', match: 50, reason: '补充画像后生成路径。' }];
+  $('#heroState').textContent = `正在验证：${profile.target || '你的下一段职业方向'}`;
+  $('#labChoices').innerHTML = choices.map((role, index) => `<button class="lab-choice ${index === 0 ? 'selected' : ''}" type="button" data-lab-index="${index}"><span>0${index + 1}</span><div><strong>${escapeHtml(role.title)}</strong><small>${index === 0 ? '现在最接近' : index === 1 ? '毕业落点' : '进阶选择'} · ${Math.round(Number(role.match || 0))} match</small></div><i>→</i></button>`).join('');
+  const updateInsight = index => {
+    const role = choices[index] || choices[0];
+    const gaps = currentPlan?.gaps || [];
+    const gap = gaps[index % Math.max(1, gaps.length)] || '一条可验证的真实成果';
+    $('#labInsight').innerHTML = `<span class="kicker">AI READOUT / 0${Number(index) + 1}</span><strong>${escapeHtml(role.title)}</strong><p>这条路径当前匹配度 ${Math.round(Number(role.match || 0))}。最值得先验证的是：${escapeHtml(compact(gap, 48))}。</p><div class="lab-micro"><span>7 天验证</span><b>${escapeHtml(index === 0 ? '做一次岗位拆解，确认你是否喜欢这类问题' : index === 1 ? '完成一个可展示项目，并获得一次外部反馈' : '进行一次深挖面试，测试能力上限')}</b></div><button class="text-button" id="labStart" type="button">开始一次验证 <span>→</span></button>`;
+    $('#labStart').addEventListener('click', () => openActionGuide(index === 0 ? '拆解 10 个目标岗位 JD' : index === 1 ? '完成一份可量化项目案例' : '进行一次目标岗位项目深挖模拟'));
+  };
+  $$('.lab-choice').forEach(button => button.addEventListener('click', () => { $$('.lab-choice').forEach(item => item.classList.toggle('selected', item === button)); updateInsight(Number(button.dataset.labIndex)); }));
+  updateInsight(0);
+}
+
 function pickRoles(currentPlan) {
   const currentRoles = Array.isArray(currentPlan.currentRoles) ? currentPlan.currentRoles : [];
   const graduationRoles = Array.isArray(currentPlan.graduationRoles) ? currentPlan.graduationRoles : [];
@@ -356,6 +372,20 @@ function renderStages(currentPlan) {
     </article>`;
   }).join('');
   syncTaskUI();
+}
+
+function renderCaseReferences(currentPlan) {
+  const cases = Array.isArray(currentPlan?.caseReferences) ? currentPlan.caseReferences.filter(item => item?.title) : [];
+  $('#caseCount').textContent = cases.length ? `${cases.length} 条参考` : '暂无参考';
+  if (!cases.length) {
+    $('#caseList').innerHTML = '<div class="case-empty">完成一次 AI 规划后，这里会显示与你当前阶段、目标和经历最相似的公开案例。</div>';
+    return;
+  }
+  $('#caseList').innerHTML = cases.slice(0, 5).map((item, index) => {
+    const signals = (item.signals || []).slice(0, 4).map(signal => `<span>${escapeHtml(signal)}</span>`).join('');
+    const excerpt = (item.excerpt || []).find(Boolean) || '公开案例已纳入本次判断。';
+    return `<article class="case-item"><div class="case-index">0${index + 1}</div><div class="case-body"><div class="case-meta"><span>${escapeHtml(item.type || '参考案例')}</span><b>${Math.round(Number(item.relevance || 0) * 100)}% 相关</b></div><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(compact(excerpt, 150))}</p><div class="case-signals">${signals}</div><a href="${escapeHtml(item.source_url || '#')}" target="_blank" rel="noreferrer">查看来源 ↗</a></div></article>`;
+  }).join('');
 }
 
 function syncTaskUI() {
@@ -411,9 +441,11 @@ function renderAll(currentPlan) {
   renderProfile(plan);
   renderRoles(plan);
   renderStages(plan);
+  renderCaseReferences(plan);
   renderActivity();
   renderGrowth();
   renderDecision(plan);
+  renderPathLab(plan);
 }
 
 function persistProfile() {
@@ -630,6 +662,7 @@ function bindEvents() {
     const target = $(`#${button.dataset.target}`);
     if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }));
+  $$('[data-target="lab"]').filter(button => !button.classList.contains('side-link')).forEach(button => button.addEventListener('click', () => $('#lab').scrollIntoView({ behavior: 'smooth', block: 'start' })));
 
   $('#sideFocusBtn').addEventListener('click', () => {
     const first = $('.task-toggle:not(.done)') || $('.task-toggle');
@@ -657,6 +690,9 @@ function bindEvents() {
 
   $$('.quick-starts [data-start]').forEach(button => button.addEventListener('click', () => {
     const mode = button.dataset.start;
+    if (mode === 'lab') { $('#lab').scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+    if (mode === 'interview') { openActionGuide('进行一次目标岗位项目深挖模拟'); return; }
+    if (mode === 'evidence') { $('[data-compose="update"]').click(); $('#evidence').scrollIntoView({ behavior: 'smooth', block: 'start' }); setTimeout(() => $('#updateInput').focus(), 350); return; }
     if (mode === 'profile') {
       $('#editProfile').click();
       return;
@@ -828,7 +864,7 @@ function bindEvents() {
     if (!visible) return;
     $$('.side-link').forEach(button => button.classList.toggle('active', button.dataset.target === visible.target.id));
   }, { rootMargin: '-20% 0px -65% 0px', threshold: [0, .2, .6] });
-  $$('#overview, #roles, #route, #evidence, #growth').forEach(section => observer.observe(section));
+  $$('#overview, #lab, #roles, #route, #cases, #evidence, #growth').forEach(section => observer.observe(section));
 }
 
 function init() {

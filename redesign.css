@@ -248,6 +248,47 @@ a { color: inherit; text-decoration: none; }
 .companion > button { align-self: flex-start; border: 0; background: transparent; color: #98a5a1; cursor: pointer; }
 
 .ai-progress { position: fixed; top: 20px; left: 50%; z-index: 30; width: min(520px, calc(100% - 30px)); padding: 13px 15px 11px; border: 1px solid rgba(72,131,113,.28); background: rgba(255,255,255,.95); backdrop-filter: blur(18px); box-shadow: 0 18px 50px rgba(20,59,50,.2); transform: translate(-50%, -150%); opacity: 0; pointer-events: none; transition: .3s; }
+.hero-state { display:flex; align-items:center; gap:11px; max-width:540px; margin:24px 0 18px; padding:12px 13px; border:1px solid rgba(112,166,137,.3); border-radius:9px; background:rgba(239,248,241,.72); }
+.hero-state .state-pulse { width:8px; height:8px; flex:none; border-radius:50%; background:var(--green); box-shadow:0 0 0 5px rgba(116,173,136,.16); }
+.hero-state div { min-width:0; flex:1; display:flex; flex-direction:column; gap:4px; }
+.hero-state small { color:#84968b; font:9px var(--mono); }
+.hero-state strong { color:var(--deep); font-size:11px; line-height:1.4; }
+.hero-state button { border:0; background:none; color:var(--deep); font-size:10px; font-weight:800; cursor:pointer; white-space:nowrap; }
+.path-lab { margin-top:44px; }
+.lab-note { color:#83948c; font:10px var(--mono); }
+.lab-layout { display:grid; grid-template-columns:minmax(0,1fr) minmax(260px,.8fr); gap:14px; }
+.lab-choices { display:grid; gap:8px; }
+.lab-choice { display:flex; align-items:center; gap:13px; width:100%; padding:15px 16px; border:1px solid var(--line); border-radius:9px; background:rgba(255,255,255,.7); color:var(--ink); text-align:left; cursor:pointer; transition:.2s; }
+.lab-choice:hover,.lab-choice.selected { border-color:#92bda0; background:#f0f8f1; transform:translateX(3px); }
+.lab-choice>span { color:#94a69c; font:11px var(--mono); }
+.lab-choice div { min-width:0; flex:1; display:flex; flex-direction:column; gap:5px; }
+.lab-choice strong { font-size:13px; }
+.lab-choice small { color:var(--muted); font-size:10px; }
+.lab-choice i { color:var(--deep); font-style:normal; }
+.lab-insight { min-height:210px; padding:22px; border-radius:10px; background:#173d35; color:#fff; box-shadow:0 15px 35px rgba(20,59,50,.15); }
+.lab-insight .kicker { color:#9ac5a7; }
+.lab-insight>strong { display:block; margin:13px 0 8px; font-size:19px; }
+.lab-insight>p { color:#c1d5c8; font-size:11px; line-height:1.7; }
+.lab-insight .text-button { margin-top:16px; color:#d8f0dd; }
+.lab-micro { display:flex; flex-direction:column; gap:6px; margin-top:16px; padding-top:13px; border-top:1px solid rgba(255,255,255,.15); }
+.lab-micro span { color:#9ac5a7; font:9px var(--mono); }
+.lab-micro b { color:#effaf1; font-size:11px; line-height:1.5; }
+@media(max-width:700px){.lab-layout{grid-template-columns:1fr}.hero-state{align-items:flex-start}.hero-state button{display:none}}
+.case-section { margin-top: 42px; }
+.case-count { color: var(--muted); font: 10px var(--mono); }
+.case-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.case-item { display: flex; gap: 14px; min-height: 160px; padding: 18px; border: 1px solid var(--line); background: rgba(255,255,255,.72); border-radius: 10px; }
+.case-index { color: var(--green); font: 12px var(--mono); padding-top: 2px; }
+.case-body { min-width: 0; flex: 1; }
+.case-meta { display: flex; justify-content: space-between; gap: 12px; color: #8ca097; font: 9px var(--mono); text-transform: uppercase; }
+.case-meta b { color: var(--deep); font-weight: 600; }
+.case-item h3 { margin: 11px 0 7px; font-size: 13px; line-height: 1.45; }
+.case-item p { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.65; }
+.case-signals { display: flex; flex-wrap: wrap; gap: 5px; margin: 12px 0 11px; }
+.case-signals span { padding: 4px 6px; color: #58806a; background: #eef7ef; border-radius: 4px; font-size: 9px; }
+.case-item a { color: var(--deep); font-size: 10px; font-weight: 700; text-decoration: none; }
+.case-empty { padding: 28px 20px; border: 1px dashed #cddbd0; color: var(--muted); font-size: 11px; text-align: center; }
+@media(max-width:700px){.case-list{grid-template-columns:1fr}}
 .ai-progress.show { transform: translate(-50%, 0); opacity: 1; }
 .ai-progress-top { display: flex; align-items: center; gap: 10px; font-size: 9px; }
 .ai-progress-top > span { color: var(--green); font: 9px var(--mono); }

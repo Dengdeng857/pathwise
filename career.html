@@ -17,6 +17,7 @@
       <div class="side-label">MY PATH</div>
       <nav class="side-nav" aria-label="主导航">
         <button class="side-link active" data-target="overview"><span class="nav-icon">⌂</span>路径总览</button>
+        <button class="side-link" data-target="lab"><span class="nav-icon">✦</span>路径沙盘</button>
         <button class="side-link" data-target="roles"><span class="nav-icon">⌁</span>岗位地图</button>
         <button class="side-link" data-target="route"><span class="nav-icon">✓</span>行动路径<span class="nav-count" id="pendingCount">3</span></button>
         <button class="side-link" data-target="evidence"><span class="nav-icon">＋</span>进展证据</button>
@@ -31,10 +32,11 @@
       <header class="top" id="overview">
         <div class="top-copy">
           <div class="top-status"><span class="status-dot"></span><span id="aiStatus">正在连接规划引擎</span></div>
-          <div class="product-label">个人职业规划陪伴助手</div>
-          <h1>从现在的经历，<br>走到毕业目标。</h1>
-          <p>小径会把你的画像、简历、项目和面试反馈，转成“现在能投什么、毕业能去哪、下一步做什么”。</p>
-          <div class="quick-starts" aria-label="开始使用"><button type="button" data-start="profile"><b>01</b><span>先建立画像</span><i>→</i></button><button type="button" data-start="resume"><b>02</b><span>上传一份简历</span><i>→</i></button><button type="button" data-start="update"><b>03</b><span>记录最近进展</span><i>→</i></button></div>
+          <div class="product-label">PATHWISE · AI CAREER OS</div>
+          <h1>别急着选答案，<br><em>先验证哪条路。</em></h1>
+          <p>小径记住你的真实经历，把每次面试、项目和选择变成可验证的职业证据。</p>
+          <div class="hero-state"><span class="state-pulse"></span><div><small>当前正在验证</small><strong id="heroState">你的下一段经历，应该补哪块能力？</strong></div><button type="button" data-target="lab">打开沙盘 →</button></div>
+          <div class="quick-starts" aria-label="开始使用"><button type="button" data-start="lab"><b>01</b><span>比较我的可能路径</span><i>→</i></button><button type="button" data-start="interview"><b>02</b><span>模拟一次真实面试</span><i>→</i></button><button type="button" data-start="evidence"><b>03</b><span>让 AI 读懂新证据</span><i>→</i></button></div>
           <div class="top-actions"><button class="primary" id="editProfile" type="button">更新基本信息 <span>↗</span></button><button class="icon-button" id="themeToggle" type="button" aria-label="切换深色模式" title="切换深色模式">◐</button></div>
         </div>
         <div class="hero-visual">
@@ -66,6 +68,8 @@
         <div class="pulse-signals"><div><span>目标方向</span><strong id="pulseTarget">待分析</strong><small>你正在靠近的岗位</small></div><div><span>关键缺口</span><strong id="pulseGap">待分析</strong><small>最该优先补的证据</small></div><div><span>下一次更新</span><strong id="pulseUpdate">现在</strong><small>完成后重新规划</small></div></div>
       </section>
 
+      <section class="path-lab page-section" id="lab" aria-labelledby="labTitle"><div class="section-head"><div><span class="kicker">PATH LAB / COUNTERFACTUAL</span><h2 id="labTitle">如果走另一条路，会发生什么？</h2><p>选一条你正在犹豫的方向，小径会告诉你下一步该用什么证据验证它。</p></div><span class="lab-note">不是预测，是验证</span></div><div class="lab-layout"><div class="lab-choices" id="labChoices"></div><div class="lab-insight" id="labInsight"><span class="kicker">AI READOUT</span><strong>先选一条路径</strong><p>你不需要现在做终身决定，只需要找到一个能在 7 天内验证的假设。</p><button class="text-button" id="labStart" type="button">开始一次验证 <span>→</span></button></div></div></section>
+
       <section class="role-section page-section" id="roles">
         <div class="section-head"><div><span class="kicker">ROLE RANGE</span><h2>现在到毕业，岗位边界在哪里？</h2><p>不是承诺录取，而是用现有证据判断现实入口、毕业落点与进阶选择。</p></div><button class="text-button" id="compareBtn" type="button">怎么看匹配度 <span>↗</span></button></div>
         <div class="role-grid">
@@ -79,6 +83,11 @@
       <section class="journey page-section" id="route">
         <div class="section-head"><div><span class="kicker">THE ROUTE</span><h2>三站，走完从现在到毕业</h2><p>每个小行动都能单独展开指导；完成后留下成果，计划才会真正改变。</p></div><span class="route-status"><i></i><b id="doneCount">0</b> 项行动已完成</span></div>
         <div class="steps" id="stageList"></div>
+      </section>
+
+      <section class="case-section page-section" id="cases" aria-labelledby="caseTitle">
+        <div class="section-head"><div><span class="kicker">REFERENCE SIGNALS</span><h2 id="caseTitle">这次判断参考了什么？</h2><p>案例只用于比较，不会替代你的真实经历。</p></div><span class="case-count" id="caseCount">等待规划</span></div>
+        <div class="case-list" id="caseList"><div class="case-empty">完成一次规划后，这里会显示与你最相关的公开岗位和求职案例。</div></div>
       </section>
 
       <section class="evidence-workspace page-section" id="evidence">
