@@ -309,27 +309,12 @@ function renderDecision(currentPlan) {
   $('#pulseTarget').textContent = compact(role.replace(/（.*?）/g, ''), 15);
   $('#pulseGap').textContent = gap;
   $('#pulseUpdate').textContent = profile.evidence.length ? '材料已进入' : '等你记录';
+  $('#heroState').textContent = `正在验证：${next?.dataset.task || profile.target || '你的下一段职业方向'}`;
   $('#decisionCta').textContent = next ? '打开这一步 →' : '记录新进展 →';
   $('#decisionCta').dataset.task = next?.dataset.task || '';
   const moodText = { steady: '今天按一个小步推进就很好。', anxious: '先只做最小的一步，不需要今天解决全部问题。', tired: '今天可以只整理材料，完成比强撑更重要。' }[profile.mood] || '';
   $('#moodNote').textContent = moodText;
   $$('.checkin button').forEach(button => button.classList.toggle('selected', button.dataset.mood === profile.mood));
-}
-
-function renderPathLab(currentPlan) {
-  const roles = pickRoles(currentPlan || makeLocalPlan()).filter(Boolean);
-  const choices = roles.length ? roles : [{ title: profile.target || '目标岗位', match: 50, reason: '补充画像后生成路径。' }];
-  $('#heroState').textContent = `正在验证：${profile.target || '你的下一段职业方向'}`;
-  $('#labChoices').innerHTML = choices.map((role, index) => `<button class="lab-choice ${index === 0 ? 'selected' : ''}" type="button" data-lab-index="${index}"><span>0${index + 1}</span><div><strong>${escapeHtml(role.title)}</strong><small>${index === 0 ? '现在最接近' : index === 1 ? '毕业落点' : '进阶选择'} · ${Math.round(Number(role.match || 0))} match</small></div><i>→</i></button>`).join('');
-  const updateInsight = index => {
-    const role = choices[index] || choices[0];
-    const gaps = currentPlan?.gaps || [];
-    const gap = gaps[index % Math.max(1, gaps.length)] || '一条可验证的真实成果';
-    $('#labInsight').innerHTML = `<span class="kicker">AI READOUT / 0${Number(index) + 1}</span><strong>${escapeHtml(role.title)}</strong><p>这条路径当前匹配度 ${Math.round(Number(role.match || 0))}。最值得先验证的是：${escapeHtml(compact(gap, 48))}。</p><div class="lab-micro"><span>7 天验证</span><b>${escapeHtml(index === 0 ? '做一次岗位拆解，确认你是否喜欢这类问题' : index === 1 ? '完成一个可展示项目，并获得一次外部反馈' : '进行一次深挖面试，测试能力上限')}</b></div><button class="text-button" id="labStart" type="button">开始一次验证 <span>→</span></button>`;
-    $('#labStart').addEventListener('click', () => openActionGuide(index === 0 ? '拆解 10 个目标岗位 JD' : index === 1 ? '完成一份可量化项目案例' : '进行一次目标岗位项目深挖模拟'));
-  };
-  $$('.lab-choice').forEach(button => button.addEventListener('click', () => { $$('.lab-choice').forEach(item => item.classList.toggle('selected', item === button)); updateInsight(Number(button.dataset.labIndex)); }));
-  updateInsight(0);
 }
 
 function pickRoles(currentPlan) {
@@ -445,7 +430,6 @@ function renderAll(currentPlan) {
   renderActivity();
   renderGrowth();
   renderDecision(plan);
-  renderPathLab(plan);
 }
 
 function persistProfile() {
@@ -662,7 +646,9 @@ function bindEvents() {
     const target = $(`#${button.dataset.target}`);
     if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }));
-  $$('[data-target="lab"]').filter(button => !button.classList.contains('side-link')).forEach(button => button.addEventListener('click', () => $('#lab').scrollIntoView({ behavior: 'smooth', block: 'start' })));
+  $$('[data-target="lab"]').forEach(button => button.addEventListener('click', () => {
+    location.href = 'lab.html';
+  }));
 
   $('#sideFocusBtn').addEventListener('click', () => {
     const first = $('.task-toggle:not(.done)') || $('.task-toggle');
@@ -690,7 +676,7 @@ function bindEvents() {
 
   $$('.quick-starts [data-start]').forEach(button => button.addEventListener('click', () => {
     const mode = button.dataset.start;
-    if (mode === 'lab') { $('#lab').scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+    if (mode === 'lab') { location.href = 'lab.html'; return; }
     if (mode === 'interview') { openActionGuide('进行一次目标岗位项目深挖模拟'); return; }
     if (mode === 'evidence') { $('[data-compose="update"]').click(); $('#evidence').scrollIntoView({ behavior: 'smooth', block: 'start' }); setTimeout(() => $('#updateInput').focus(), 350); return; }
     if (mode === 'profile') {
@@ -864,7 +850,7 @@ function bindEvents() {
     if (!visible) return;
     $$('.side-link').forEach(button => button.classList.toggle('active', button.dataset.target === visible.target.id));
   }, { rootMargin: '-20% 0px -65% 0px', threshold: [0, .2, .6] });
-  $$('#overview, #lab, #roles, #route, #cases, #evidence, #growth').forEach(section => observer.observe(section));
+  $$('#overview, #roles, #route, #cases, #evidence, #growth').forEach(section => observer.observe(section));
 }
 
 function init() {
