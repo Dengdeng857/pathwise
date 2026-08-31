@@ -125,3 +125,39 @@ export function compactProfile(profile = {}) {
     }))
   };
 }
+
+export async function retrieveCases(env, profile = {}, limit = 5) {
+  try {
+    const asset = env.ASSETS;
+    if (!asset) return [];
+    const url = new URL('/data/nowcoder.curated.jsonl', 'https://pathwise.local');
+    const response = await asset.fetch(url);
+    if (!response.ok) return [];
+    const text = await response.text();
+    const query = [profile.stage, profile.school, profile.major, profile.target, profile.experience, ...(profile.updates || [])].join(' ').toLowerCase();
+    const chunks = query.match(/[\u4e00-\u9fff]{2,}|[A-Za-z0-9+#.-]{2,}/g) || [];
+    const queryTerms = [...new Set(chunks.flatMap(chunk => {
+      if (/^[\u4e00-\u9fff]+$/.test(chunk)) {
+        return [chunk, ...Array.from({ length: Math.max(0, chunk.length - 1) }, (_, i) => chunk.slice(i, i + 2))];
+      }
+      return [chunk];
+    }).filter(term => term.length >= 2))];
+    const rows = text.split(/\r?\n/).map(line => { try { return JSON.parse(line); } catch (_) { return null; } }).filter(Boolean);
+    return rows.map(row => {
+      const haystack = JSON.stringify(row).toLowerCase();
+      const hits = queryTerms.reduce((score, term) => score + (haystack.includes(term) ? 1 : 0), 0);
+      const typeBoost = row.type === 'interview' ? 1 : row.type === 'career_path' ? 0.9 : row.type === 'jd' ? 0.7 : 0.4;
+      return { row, score: hits + typeBoost };
+    }).sort((a, b) => b.score - a.score).slice(0, limit).map(({ row, score }) => ({
+      id: row.id,
+      type: row.type,
+      title: row.title,
+      source_url: row.source_url,
+      signals: row.signals || [],
+      excerpt: (row.source_excerpt || []).slice(0, 2),
+      relevance: Math.min(1, Number((score / Math.max(5, queryTerms.length)).toFixed(2)))
+    }));
+  } catch (_) {
+    return [];
+  }
+}
