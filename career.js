@@ -8,8 +8,6 @@ const STORAGE = {
   guides: 'pathwiseActionGuides',
   theme: 'pathwiseTheme'
 };
-const hasStoredProfile = Boolean(localStorage.getItem(STORAGE.profile));
-
 const DEFAULT_PROFILE = {
   stage: '本科大三下',
   school: '211',
@@ -28,6 +26,13 @@ function readJSON(key, fallback) {
   try { return JSON.parse(localStorage.getItem(key)) ?? fallback; }
   catch { return fallback; }
 }
+
+// Older builds seeded this demo profile into localStorage. Treat it as empty
+// onboarding state unless the user has added real progress or evidence.
+const storedProfile = readJSON(STORAGE.profile, null);
+const isSeededDemo = storedProfile && storedProfile.stage === DEFAULT_PROFILE.stage && storedProfile.school === DEFAULT_PROFILE.school && storedProfile.major === DEFAULT_PROFILE.major && storedProfile.target === DEFAULT_PROFILE.target && storedProfile.experience === DEFAULT_PROFILE.experience && !(storedProfile.updates || []).length && !(storedProfile.evidence || []).length;
+if (isSeededDemo) Object.values(STORAGE).filter(key => key !== STORAGE.theme).forEach(key => localStorage.removeItem(key));
+const hasStoredProfile = Boolean(localStorage.getItem(STORAGE.profile));
 
 function writeJSON(key, value) {
   localStorage.setItem(key, JSON.stringify(value));
@@ -875,6 +880,7 @@ function bindEvents() {
 }
 
 function init() {
+  document.body.classList.toggle('is-onboarding', !hasStoredProfile);
   if (!hasStoredProfile) {
     $('#profileModalTitle').textContent = '建立你的职业画像';
     $('#companionText').textContent = '第一次使用，先告诉我你现在在哪、想去哪里。';
