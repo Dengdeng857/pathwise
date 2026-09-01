@@ -676,6 +676,14 @@ function bindEvents() {
 
   $$('.quick-starts [data-start]').forEach(button => button.addEventListener('click', () => {
     const mode = button.dataset.start;
+    if (mode === 'route') {
+      $('#route').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setTimeout(() => {
+        const first = $('.task-toggle:not(.done)') || $('.task-toggle');
+        if (first) openActionGuide(first.dataset.task);
+      }, 350);
+      return;
+    }
     if (mode === 'lab') { location.href = 'lab.html'; return; }
     if (mode === 'interview') { openActionGuide('进行一次目标岗位项目深挖模拟'); return; }
     if (mode === 'evidence') { $('[data-compose="update"]').click(); $('#evidence').scrollIntoView({ behavior: 'smooth', block: 'start' }); setTimeout(() => $('#updateInput').focus(), 350); return; }
