@@ -8,6 +8,7 @@ const STORAGE = {
   guides: 'pathwiseActionGuides',
   theme: 'pathwiseTheme'
 };
+const hasStoredProfile = Boolean(localStorage.getItem(STORAGE.profile));
 
 const DEFAULT_PROFILE = {
   stage: '本科大三下',
@@ -47,7 +48,9 @@ function unique(items) {
   return [...new Set(items.filter(Boolean))];
 }
 
-let profile = { ...DEFAULT_PROFILE, ...readJSON(STORAGE.profile, {}) };
+let profile = hasStoredProfile
+  ? { ...DEFAULT_PROFILE, ...readJSON(STORAGE.profile, {}) }
+  : { ...DEFAULT_PROFILE, stage: '', school: '', major: '', target: '', experience: '', updates: [], evidence: [] };
 profile.updates = Array.isArray(profile.updates) ? profile.updates : [];
 profile.evidence = Array.isArray(profile.evidence) ? profile.evidence.map(item => typeof item === 'string' ? { type: '材料', content: item } : item).filter(Boolean) : [];
 profile.updates = unique(profile.updates.map(String).filter(update => {
@@ -288,6 +291,16 @@ function profileCompleteness() {
 }
 
 function renderProfile(currentPlan = plan) {
+  if (!hasStoredProfile) {
+    $('#profileTitle').textContent = '还没有建立职业画像';
+    $('#profileSummary').textContent = '上传简历或填写基本信息，小径会为你生成第一份职业规划。';
+    $('#stageStat').textContent = '待填写';
+    $('#targetStat').textContent = '待填写';
+    $('#profileScore').innerHTML = '0<em>%</em>';
+    $('#profileOrb').textContent = 'P';
+    $('#userMeta').textContent = '等待建立画像';
+    return;
+  }
   const title = currentPlan?.profile || `${profile.stage} · ${profile.school} ${profile.major}`;
   const summary = currentPlan?.summary || `${profile.experience} · 目标：${profile.target}`;
   $('#profileTitle').textContent = compact(title, 70);
@@ -862,16 +875,20 @@ function bindEvents() {
 }
 
 function init() {
+  if (!hasStoredProfile) {
+    $('#profileModalTitle').textContent = '建立你的职业画像';
+    $('#companionText').textContent = '第一次使用，先告诉我你现在在哪、想去哪里。';
+  }
   if (localStorage.getItem(STORAGE.theme) === 'night') document.body.classList.add('night');
   $('.hero-visual img').addEventListener('error', () => $('.hero-visual').classList.add('fallback'));
   const updateClock = () => { $('#clock').textContent = new Intl.DateTimeFormat('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date()); };
   updateClock();
   setInterval(updateClock, 30000);
   bindEvents();
-  persistProfile();
+  if (hasStoredProfile) persistProfile();
   renderAll(plan || makeLocalPlan());
   checkHealth();
-  if (!localStorage.getItem(STORAGE.profile)) {
+  if (!hasStoredProfile) {
     setTimeout(() => {
       companionSay('第一次使用，先更新基本信息；也可以直接到“进展证据”上传简历。');
       fillProfileForm();
