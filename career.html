@@ -17,13 +17,13 @@
       <div class="side-label">MY PATH</div>
       <nav class="side-nav" aria-label="主导航">
         <button class="side-link active" data-target="overview"><span class="nav-icon">⌂</span>路径总览</button>
-        <a class="side-link side-anchor" href="lab.html"><span class="nav-icon">✦</span>路径沙盘</a>
+        <a class="side-link side-anchor" href="lab.html"><span class="nav-icon">✦</span>方向比较</a>
         <button class="side-link" data-target="roles"><span class="nav-icon">⌁</span>岗位地图</button>
         <button class="side-link" data-target="route"><span class="nav-icon">✓</span>行动路径<span class="nav-count" id="pendingCount">3</span></button>
         <button class="side-link" data-target="evidence"><span class="nav-icon">＋</span>进展证据</button>
         <button class="side-link" data-target="growth"><span class="nav-icon">↗</span>成长报告</button>
       </nav>
-      <div class="side-focus"><span class="kicker">NEXT MOVE</span><strong id="focusTitle">完成第一个可验证行动</strong><p id="focusMeta">结果会成为下一次路径判断的依据。</p><button id="sideFocusBtn" type="button">打开行动 <span>→</span></button></div>
+      <div class="side-focus"><span class="kicker">NEXT STEP</span><strong id="focusTitle">完成第一个规划行动</strong><p id="focusMeta">每一步都会让下一次规划更贴近你。</p><button id="sideFocusBtn" type="button">打开行动 <span>→</span></button></div>
       <button class="reset-path" type="button"><span>↻</span> 重置我的路径</button>
       <div class="user"><div class="avatar" id="avatarText">P</div><div><strong>我的职业路径</strong><small id="userMeta">进展自动保存</small></div><span class="save-dot" title="数据已保存"></span></div>
     </aside>
@@ -33,10 +33,10 @@
         <div class="top-copy">
           <div class="top-status"><span class="status-dot"></span><span id="aiStatus">正在连接规划引擎</span></div>
           <div class="product-label">PATHWISE · AI CAREER OS</div>
-          <h1>别急着选答案，<br><em>先验证哪条路。</em></h1>
-          <p>小径记住你的真实经历，把每次面试、项目和选择变成可验证的职业证据。</p>
-          <div class="hero-state"><span class="state-pulse"></span><div><small>当前正在验证</small><strong id="heroState">你的下一段经历，应该补哪块能力？</strong></div><button type="button" data-target="lab">打开沙盘 →</button></div>
-          <div class="quick-starts" aria-label="开始使用"><button type="button" data-start="lab"><b>01</b><span>比较我的可能路径</span><i>→</i></button><button type="button" data-start="interview"><b>02</b><span>模拟一次真实面试</span><i>→</i></button><button type="button" data-start="evidence"><b>03</b><span>让 AI 读懂新证据</span><i>→</i></button></div>
+          <h1>你的职业规划，<br><em>从今天开始变具体。</em></h1>
+          <p>小径记住你的真实经历，把目标拆成现在、毕业和更长远的每一步，并在你有新进展时持续更新。</p>
+          <div class="hero-state"><span class="state-pulse"></span><div><small>当前最值得推进</small><strong id="heroState">你的下一段经历，应该补哪块能力？</strong></div><button type="button" data-target="lab">比较方向 →</button></div>
+          <div class="quick-starts" aria-label="规划入口"><button type="button" data-start="lab"><b>01</b><span>比较我的方向</span><i>→</i></button><button type="button" data-start="interview"><b>02</b><span>准备一次真实面试</span><i>→</i></button><button type="button" data-start="evidence"><b>03</b><span>更新一条最新进展</span><i>→</i></button></div>
           <div class="top-actions"><button class="primary" id="editProfile" type="button">更新基本信息 <span>↗</span></button><button class="icon-button" id="themeToggle" type="button" aria-label="切换深色模式" title="切换深色模式">◐</button></div>
         </div>
         <div class="hero-visual">
@@ -49,12 +49,12 @@
       </header>
 
       <section class="orientation-strip" aria-label="产品使用方式">
-        <div class="orientation-intro"><span class="kicker">HOW PATHWISE WORKS</span><strong>不是给你一份静态建议，而是陪你持续修正。</strong></div>
-        <div class="orientation-step"><b>01</b><span>告诉我你现在在哪</span><small>阶段 · 专业 · 目标</small></div>
+        <div class="orientation-intro"><span class="kicker">YOUR CAREER PLAN</span><strong>一条主线，从画像走到成长。</strong></div>
+        <div class="orientation-step"><b>01</b><span>先认识现在的你</span><small>阶段 · 专业 · 目标</small></div>
         <div class="orientation-line"></div>
         <div class="orientation-step"><b>02</b><span>把真实经历放进来</span><small>简历 · 项目 · 面试</small></div>
         <div class="orientation-line"></div>
-        <div class="orientation-step"><b>03</b><span>每次行动后重新规划</span><small>岗位 · 阶段 · 成长</small></div>
+        <div class="orientation-step"><b>03</b><span>记录进展，持续成长</span><small>行动 · 反馈 · 成果</small></div>
       </section>
 
       <section class="identity" aria-labelledby="profileTitle">
@@ -64,12 +64,12 @@
       </section>
 
       <section class="decision-pulse" id="decisionPulse" aria-label="当前决策建议">
-        <div class="pulse-copy"><span class="kicker">TODAY'S DECISION</span><h2 id="decisionTitle">先完成一项能被验证的行动</h2><p id="decisionReason">小径会根据你的目标、证据和进展，告诉你现在最值得做什么。</p><button class="pulse-cta" id="decisionCta" type="button">打开这一步 <span>→</span></button><div class="checkin"><span>今天的状态</span><button type="button" data-mood="steady">稳稳推进</button><button type="button" data-mood="anxious">有点焦虑</button><button type="button" data-mood="tired">需要缓一缓</button><small id="moodNote"></small></div></div>
+        <div class="pulse-copy"><span class="kicker">TODAY'S PLAN</span><h2 id="decisionTitle">今天，先完成一项规划行动</h2><p id="decisionReason">小径会根据你的目标、证据和进展，告诉你现在最值得做什么。</p><button class="pulse-cta" id="decisionCta" type="button">打开这一步 <span>→</span></button><div class="checkin"><span>今天的状态</span><button type="button" data-mood="steady">稳稳推进</button><button type="button" data-mood="anxious">有点焦虑</button><button type="button" data-mood="tired">需要缓一缓</button><small id="moodNote"></small></div></div>
         <div class="pulse-signals"><div><span>目标方向</span><strong id="pulseTarget">待分析</strong><small>你正在靠近的岗位</small></div><div><span>关键缺口</span><strong id="pulseGap">待分析</strong><small>最该优先补的证据</small></div><div><span>下一次更新</span><strong id="pulseUpdate">现在</strong><small>完成后重新规划</small></div></div>
       </section>
 
       <section class="role-section page-section" id="roles">
-        <div class="section-head"><div><span class="kicker">ROLE RANGE</span><h2>现在到毕业，岗位边界在哪里？</h2><p>不是承诺录取，而是用现有证据判断现实入口、毕业落点与进阶选择。</p></div><button class="text-button" id="compareBtn" type="button">怎么看匹配度 <span>↗</span></button></div>
+        <div class="section-head"><div><span class="kicker">YOUR CAREER MAP</span><h2>现在到毕业，规划会把你带到哪里？</h2><p>先看现实入口，再看毕业落点，最后明确需要补齐的能力。</p></div><button class="text-button" id="compareBtn" type="button">了解匹配逻辑 <span>↗</span></button></div>
         <div class="role-grid">
           <article class="role-card now"><div class="role-top"><span class="role-tag">现在可投</span><strong><b class="match-value">--</b> MATCH</strong></div><h3>正在读取岗位</h3><p>根据当前画像生成现实入口。</p><div class="match-track"><i></i></div><button class="open-guide" data-role-index="0" type="button">查看投递建议 <span>→</span></button></article>
           <article class="role-card graduation"><div class="role-top"><span class="role-tag">毕业落点</span><strong><b class="match-value">--</b> MATCH</strong></div><h3>正在读取岗位</h3><p>根据毕业前可补齐的证据生成。</p><div class="match-track"><i></i></div><button class="open-guide" data-role-index="1" type="button">查看成长条件 <span>→</span></button></article>

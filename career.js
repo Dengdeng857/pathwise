@@ -309,7 +309,7 @@ function renderDecision(currentPlan) {
   $('#pulseTarget').textContent = compact(role.replace(/（.*?）/g, ''), 15);
   $('#pulseGap').textContent = gap;
   $('#pulseUpdate').textContent = profile.evidence.length ? '材料已进入' : '等你记录';
-  $('#heroState').textContent = `正在验证：${next?.dataset.task || profile.target || '你的下一段职业方向'}`;
+  $('#heroState').textContent = `当前规划重点：${next?.dataset.task || profile.target || '你的下一段职业方向'}`;
   $('#decisionCta').textContent = next ? '打开这一步 →' : '记录新进展 →';
   $('#decisionCta').dataset.task = next?.dataset.task || '';
   const moodText = { steady: '今天按一个小步推进就很好。', anxious: '先只做最小的一步，不需要今天解决全部问题。', tired: '今天可以只整理材料，完成比强撑更重要。' }[profile.mood] || '';
