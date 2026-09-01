@@ -32,7 +32,7 @@ function readJSON(key, fallback) {
 const storedProfile = readJSON(STORAGE.profile, null);
 const isSeededDemo = storedProfile && storedProfile.stage === DEFAULT_PROFILE.stage && storedProfile.school === DEFAULT_PROFILE.school && storedProfile.major === DEFAULT_PROFILE.major && storedProfile.target === DEFAULT_PROFILE.target && storedProfile.experience === DEFAULT_PROFILE.experience && !(storedProfile.updates || []).length && !(storedProfile.evidence || []).length;
 if (isSeededDemo) Object.values(STORAGE).filter(key => key !== STORAGE.theme).forEach(key => localStorage.removeItem(key));
-const hasStoredProfile = Boolean(localStorage.getItem(STORAGE.profile));
+let hasStoredProfile = Boolean(localStorage.getItem(STORAGE.profile));
 
 function writeJSON(key, value) {
   localStorage.setItem(key, JSON.stringify(value));
@@ -335,6 +335,27 @@ function renderDecision(currentPlan) {
   $$('.checkin button').forEach(button => button.classList.toggle('selected', button.dataset.mood === profile.mood));
 }
 
+function renderPlanDelta(previousPlan, nextPlan, sourceLabel = '新信息') {
+  const box = $('#planDelta');
+  if (!box || !nextPlan) return;
+  const previousRole = pickRoles(previousPlan || {}).find(Boolean)?.title;
+  const nextRole = pickRoles(nextPlan || {}).find(Boolean)?.title || profile.target || '目标方向';
+  const previousGap = previousPlan?.gaps?.[0];
+  const nextGap = nextPlan?.gaps?.[0];
+  let title = `${sourceLabel}已进入职业规划`;
+  let text = `小径重新检查了你的岗位方向、能力差距和行动顺序。当前优先推进：${compact(nextPlan.actions?.[0] || '补充一条真实成果', 38)}。`;
+  if (previousRole && nextRole && previousRole !== nextRole) {
+    title = `岗位判断已更新：${compact(nextRole, 30)}`;
+    text = `根据${sourceLabel}，你的现实入口从“${compact(previousRole, 24)}”调整为“${compact(nextRole, 24)}”。先补齐：${compact(nextGap || '关键能力证据', 34)}。`;
+  } else if (previousGap && nextGap && previousGap !== nextGap) {
+    title = '行动优先级已重新排序';
+    text = `原先最需要补的是“${compact(previousGap, 24)}”，现在更应该先处理“${compact(nextGap, 30)}”。这是因为新信息改变了证据权重。`;
+  }
+  $('#planDeltaTitle').textContent = title;
+  $('#planDeltaText').textContent = text;
+  box.hidden = false;
+}
+
 function pickRoles(currentPlan) {
   const currentRoles = Array.isArray(currentPlan.currentRoles) ? currentPlan.currentRoles : [];
   const graduationRoles = Array.isArray(currentPlan.graduationRoles) ? currentPlan.graduationRoles : [];
@@ -452,19 +473,22 @@ function renderAll(currentPlan) {
 
 function persistProfile() {
   writeJSON(STORAGE.profile, profile);
+  hasStoredProfile = true;
+  document.body.classList.remove('is-onboarding');
   renderProfile(plan);
   renderActivity();
 }
 
 async function recalculate(successMessage = '路径已经根据新信息更新。') {
+  const previousPlan = plan;
   startProgress();
   try {
     const result = await requestStreamingPlan(profile);
     if (!result.currentRoles || !result.stages) throw new Error('模型返回缺少规划字段');
-    if (!result.currentRoles || !result.stages) throw new Error('模型返回缺少规划字段');
     plan = { ...result, source: result.source || 'ai' };
     writeJSON(STORAGE.plan, plan);
     renderAll(plan);
+    renderPlanDelta(previousPlan, plan, '这次更新');
     finishProgress();
     showToast('AI 已更新岗位与三阶段路径');
     companionSay(successMessage);
@@ -475,9 +499,11 @@ async function recalculate(successMessage = '路径已经根据新信息更新�
     plan = makeLocalPlan(profile, reason);
     writeJSON(STORAGE.plan, plan);
     renderAll(plan);
+    renderPlanDelta(previousPlan, plan, '这次更新');
     finishProgress('已保留当前路径');
     showToast('新信息已保存，当前路径保持可用');
     companionSay(`智能规划暂时没有完成响应，但你的信息没有丢失，可以稍后再次更新。`);
+    setAIStatus('路径已更新 · 使用本地规划', false);
     console.warn('Pathwise plan request failed:', error);
     return false;
   }
@@ -814,7 +840,14 @@ function bindEvents() {
   });
   $('#profileForm').addEventListener('submit', async event => {
     event.preventDefault();
-    profile = { ...profile, ...Object.fromEntries(new FormData(event.target)) };
+    const formData = Object.fromEntries(new FormData(event.target));
+    const missing = ['stage', 'school', 'major', 'target'].find(key => !String(formData[key] || '').trim());
+    if (missing) {
+      showToast('请先补齐阶段、学校、专业和目标岗位');
+      event.target.elements[missing]?.focus();
+      return;
+    }
+    profile = { ...profile, ...formData };
     persistProfile();
     closeModal($('#profileModal'));
     await recalculate('基本信息已经更新，整条路径也同步换成了新的目标。');
