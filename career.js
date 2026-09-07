@@ -673,8 +673,14 @@ function renderAll(currentPlan) {
     $('#sideProgressValue').textContent = '0%';
     $('#sideProgressFill').style.width = '0%';
     $('#weeklyProgress').textContent = '建立画像后开始计算';
+    $('#editProfile').innerHTML = '建立我的画像 <span>↗</span>';
+    $('#aiCommandInput').disabled = true;
+    $('#aiCommandForm button').disabled = true;
     return;
   }
+  $('#editProfile').innerHTML = '更新基本信息 <span>↗</span>';
+  $('#aiCommandInput').disabled = false;
+  $('#aiCommandForm button').disabled = false;
   plan = currentPlan || makeLocalPlan();
   renderProfile(plan);
   renderRoles(plan);

@@ -17,6 +17,8 @@ const call = async (payload, env = {}) => {
 
 const empty = await call({ content: '   ' });
 assert.equal(empty.response.status, 400);
+const malformed = await onRequestPost({ request: new Request('https://pathwise.test', { method:'POST', body:'{' }), env:{} });
+assert.equal(malformed.status, 400);
 
 const resume = '2027 届 北京大学 软件工程硕士，参与 AI 产品项目。';
 const degraded = await call({ content: resume });

@@ -10,7 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="redesign.css">
 </head>
-<body class="workspace-view-overview">
+<body class="workspace-view-overview is-onboarding">
   <main class="app-shell">
     <aside class="side">
       <a class="logo" href="index.html" aria-label="Pathwise 首页"><b>P</b><span>pathwise</span><small>career companion</small></a>
@@ -37,7 +37,7 @@
           <p>小径记住你的真实经历，把目标拆成现在、毕业和更长远的每一步，并在你有新进展时持续更新。</p>
           <form class="ai-command" id="aiCommandForm"><span>✦</span><input id="aiCommandInput" autocomplete="off" placeholder="告诉小径最近发生了什么…"><button type="submit">交给 AI ↗</button></form>
           <div class="ai-command-examples"><span>试试：</span><button type="button">我刚完成一次面试</button><button type="button">我做完了一个项目</button><button type="button">我想换目标岗位</button></div>
-          <div class="top-actions"><button class="primary" id="editProfile" type="button">更新基本信息 <span>↗</span></button><button class="icon-button" id="themeToggle" type="button" aria-label="切换深色模式" title="切换深色模式">◐</button></div>
+          <div class="top-actions"><button class="primary" id="editProfile" type="button">建立我的画像 <span>↗</span></button><button class="icon-button" id="themeToggle" type="button" aria-label="切换深色模式" title="切换深色模式">◐</button></div>
         </div>
         <div class="hero-visual">
           <img src="https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&fit=crop&w=1400&q=88" alt="年轻团队在真实工作场景中讨论项目">
@@ -58,8 +58,8 @@
       </section>
 
       <section class="identity" aria-labelledby="profileTitle">
-        <div class="identity-main"><div class="profile-orb" id="profileOrb">CS</div><div><span class="kicker">CURRENT PROFILE</span><h2 id="profileTitle">本科大三下 · 211 信息安全</h2><p id="profileSummary">掌握 Python，有 2 个项目经验 · 目标：软件安全工程师</p></div></div>
-        <div class="identity-stats"><div><small>当前阶段</small><strong id="stageStat">大三下</strong></div><div><small>目标方向</small><strong id="targetStat">软件安全</strong></div><div><small>画像完整度</small><strong id="profileScore">52<em>%</em></strong></div></div>
+        <div class="identity-main"><div class="profile-orb" id="profileOrb">P</div><div><span class="kicker">CURRENT PROFILE</span><h2 id="profileTitle">还没有建立职业画像</h2><p id="profileSummary">上传简历或填写基本信息，小径会为你生成第一份职业规划。</p></div></div>
+        <div class="identity-stats"><div><small>当前阶段</small><strong id="stageStat">待填写</strong></div><div><small>目标方向</small><strong id="targetStat">待填写</strong></div><div><small>画像完整度</small><strong id="profileScore">0<em>%</em></strong></div></div>
         <button class="text-button profile-edit-inline" type="button">编辑基本信息</button>
       </section>
 

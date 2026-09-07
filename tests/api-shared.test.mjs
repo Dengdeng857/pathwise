@@ -23,6 +23,10 @@ const valid = {
   caseReferences: [{ excerpt: ['N/A'] }]
 };
 assert.equal(shared.validatePlan(valid), valid);
+const wrapped = shared.normalizePlanContract({ plan: { profile:'事实画像', summary:'简短判断', current_roles:[], graduation_roles:[], gaps:[], actions:[], action_guides:[], career_stages:[] } });
+assert.equal(wrapped.schemaVersion, 'pathwise.plan.v1');
+assert.ok(Array.isArray(wrapped.currentRoles) && Array.isArray(wrapped.actionGuides));
+assert.equal(shared.normalizePlanContract({ profile:'x' }).profile, 'x');
 for (const mutation of [
   value => { value.profile = 'string'; },
   value => { value.actions = []; },

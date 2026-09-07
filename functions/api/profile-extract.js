@@ -10,7 +10,8 @@ function fallbackExtract(content) {
 
 export async function onRequestPost({ request, env }) {
   try {
-    const payload = await request.json();
+    let payload;
+    try { payload = await request.json(); } catch (_) { return json({ error: '请求 JSON 格式无效' }, 400); }
     const content = String(payload.content || '').slice(0, 18000);
     if (!content.trim()) return json({ error: '缺少简历内容' }, 400);
     const schema = '{"stage":"简历中的学历和年级或毕业时间，没有就留空","school":"简历中的学校或学校层次，没有就留空","major":"简历中的专业，没有就留空","experience":"2-4句事实摘要","recommendation":{"target":"一个建议岗位","basis":"不超过45字的简历依据","confidence":0}}';

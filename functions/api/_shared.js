@@ -137,6 +137,19 @@ export function parseModelJson(content) {
   }
 }
 
+// Repair only serialization-level drift (wrappers and snake_case aliases).
+// Missing or malformed content remains the responsibility of validatePlan.
+export function normalizePlanContract(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
+  const source = value.plan && typeof value.plan === 'object' ? value.plan
+    : value.data && typeof value.data === 'object' && !Array.isArray(value.data) ? value.data : value;
+  const aliases = { current_roles:'currentRoles', graduation_roles:'graduationRoles', action_guides:'actionGuides', career_stages:'stages' };
+  const normalized = { ...source };
+  Object.entries(aliases).forEach(([from, to]) => { if (!(to in normalized) && from in normalized) normalized[to] = normalized[from]; });
+  normalized.schemaVersion = String(normalized.schemaVersion || normalized.schema_version || 'pathwise.plan.v1');
+  return normalized;
+}
+
 export function hasModelPlaceholder(value) {
   if (typeof value === 'string') return /^(string|number|object|array|boolean|null|undefined)$/i.test(value.trim()) || value.trim().toLowerCase() === 'n/a';
   if (Array.isArray(value)) return value.some(hasModelPlaceholder);

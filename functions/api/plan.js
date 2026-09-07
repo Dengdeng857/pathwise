@@ -1,4 +1,4 @@
-import { chat, compactProfile, json, parseModelJson, retrieveCases, upstreamChat, validatePlan } from './_shared.js';
+import { chat, compactProfile, json, normalizePlanContract, parseModelJson, retrieveCases, upstreamChat, validatePlan } from './_shared.js';
 
 export async function onRequestPost({ request, env }) {
   try {
@@ -33,7 +33,7 @@ export async function onRequestPost({ request, env }) {
       return new Response(readable, { status: 200, headers: { 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-cache, no-transform', 'X-Accel-Buffering': 'no', Connection: 'keep-alive' } });
     }
     const content = await chat(env, messages, 4000, { stream: true });
-    const result = validatePlan(parseModelJson(content));
+    const result = validatePlan(normalizePlanContract(parseModelJson(content)));
     result.source = 'ai';
     result.status = 'ready';
     result.caseReferences = cases;

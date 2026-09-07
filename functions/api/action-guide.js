@@ -2,7 +2,8 @@ import { chat, compactProfile, hasModelPlaceholder, json, parseModelJson } from 
 
 export async function onRequestPost({ request, env }) {
   try {
-    const payload = await request.json();
+    let payload;
+    try { payload = await request.json(); } catch (_) { return json({ error: '请求 JSON 格式无效' }, 400); }
     const action = String(payload.action || '').trim().slice(0, 240);
     if (!action) return json({ error: '缺少行动项' }, 400);
     const profile = compactProfile(payload.profile || {});
