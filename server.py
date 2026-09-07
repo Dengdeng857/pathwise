@@ -239,6 +239,43 @@ def extract_document(filename, content, content_type):
         return transcribe_audio(filename, content, content_type)
     return '文件已上传，但当前未配置对应解析器。'
 
+def local_profile_extract(content, current=None):
+    """Conservative local resume extraction for offline/local demos."""
+    text=' '.join(str(content or '').replace('\x00',' ').split())
+    stage_match=re.search(r'(本科\s*[大研]?[一二三四上下]?|硕士\s*[一二三]?|博士\s*[一二三]?|20\d{2}\s*届)',text)
+    school_match=re.search(r'(985|211|双一流|北京大学|清华大学|复旦大学|上海交通大学|浙江大学|中国人民大学|北京航空航天大学|北京理工大学)',text)
+    major_match=re.search(r'(?:专业|主修|就读于)[：:\s]*([\u4e00-\u9fffA-Za-z0-9/+· -]{2,24})',text)
+    if not major_match:
+        major_match=re.search(r'(信息安全|网络空间安全|软件工程|计算机科学与技术|计算机|数据科学|人工智能|电子信息|自动化)',text)
+    signals=[]
+    for sentence in re.split(r'[。；;.!！？]',text):
+        sentence=sentence.strip()
+        if sentence and re.search(r'实习|项目|技能|负责|开发|研究|Python|Java|Go|安全|AI|竞赛',sentence,re.I): signals.append(sentence)
+    return {
+        'stage': stage_match.group(1).replace(' ','') if stage_match else '',
+        'school': school_match.group(1) if school_match else '',
+        'major': major_match.group(1).strip(' ，,。') if major_match else '',
+        'experience': ('；'.join(signals[:4]) or text[:900])[:900],
+        'source':'local'
+    }
+
+def local_evidence_insight(content, profile=None):
+    text=' '.join(str(content or '').split())
+    proves=[]
+    if re.search(r'项目|上线|开发|系统|平台',text): proves.append('材料中出现了可讨论的项目或工程产出')
+    if re.search(r'实习|工作|负责|协作',text): proves.append('材料包含真实协作或业务经历线索')
+    if re.search(r'Python|Java|Go|C\+\+|SQL|AI|模型|安全',text,re.I): proves.append('材料提到可用于岗位匹配的技术关键词')
+    gaps=[]
+    if not re.search(r'\d+\s*[%万千个次]|提升|降低|增长|用户|时延|准确率',text): gaps.append('缺少可核验的结果或指标')
+    if not re.search(r'链接|GitHub|作品集|报告|截图',text,re.I): gaps.append('缺少可查看的成果链接或附件')
+    return {
+        'proves':proves[:3] or ['材料已保存，但还需要补充具体事实'],
+        'gaps':gaps[:3] or ['继续补充外部反馈或面试结果'],
+        'next':'补充一个结果、数据或外部反馈，并保存到证据链。',
+        'resumeLine':'参与相关项目并负责部分方案、实现或复盘工作（待补充量化结果）。',
+        'source':'local'
+    }
+
 def analyze_image(filename, content, content_type):
     """Use a configured vision-capable domestic gateway, otherwise keep a truthful local status."""
     key=os.environ.get('VISION_API_KEY') or os.environ.get('MODELSNEXUS_API_KEY')
@@ -320,6 +357,10 @@ class Handler(SimpleHTTPRequestHandler):
             fileitem=form['file'] if 'file' in form else None
             if fileitem is None or not getattr(fileitem,'filename',None): self.send_error(400,'missing file'); return
             raw=fileitem.file.read(); text=extract_document(fileitem.filename,raw,fileitem.type or 'application/octet-stream'); out={'filename':fileitem.filename,'type':fileitem.type,'text':text[:30000],'bytes':len(raw)}; body=json.dumps(out,ensure_ascii=False).encode(); self.send_response(200); self.send_header('Content-Type','application/json'); self.send_header('Content-Length',str(len(body))); self.end_headers(); self.wfile.write(body); return
+        if self.path in ('/api/profile-extract','/api/evidence-insight'):
+            n=int(self.headers.get('Content-Length',0)); payload=json.loads(self.rfile.read(n) or '{}')
+            result = local_profile_extract(payload.get('content',''), payload.get('profile')) if self.path.endswith('profile-extract') else local_evidence_insight(payload.get('content',''), payload.get('profile'))
+            body=json.dumps(result,ensure_ascii=False).encode(); self.send_response(200); self.send_header('Content-Type','application/json'); self.send_header('Content-Length',str(len(body))); self.end_headers(); self.wfile.write(body); return
         if self.path not in ('/api/plan','/api/action-guide'): self.send_error(404); return
         n=int(self.headers.get('Content-Length',0)); payload=json.loads(self.rfile.read(n) or '{}')
         result=make_plan(payload) if self.path=='/api/plan' else make_action_guide(payload)

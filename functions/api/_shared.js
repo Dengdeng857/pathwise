@@ -107,7 +107,30 @@ export async function chat(env, messages, maxTokens = 1800, options = {}) {
 }
 
 export function parseModelJson(content) {
-  return JSON.parse(String(content).replace(/^```(?:json)?\s*|\s*```$/g, '').trim());
+  const cleaned = String(content).replace(/^```(?:json)?\s*|\s*```$/g, '').trim();
+  try { return JSON.parse(cleaned); } catch (_) {
+    const start = cleaned.search(/[\[{]/);
+    if (start < 0) throw new Error('模型返回不是 JSON');
+    const opening = cleaned[start];
+    const closing = opening === '[' ? ']' : '}';
+    let depth = 0; let quoted = false; let escaped = false;
+    for (let index = start; index < cleaned.length; index += 1) {
+      const char = cleaned[index];
+      if (quoted) { if (escaped) escaped = false; else if (char === '\\') escaped = true; else if (char === '"') quoted = false; continue; }
+      if (char === '"') { quoted = true; continue; }
+      if (char === opening) depth += 1;
+      else if (char === closing) depth -= 1;
+      if (depth === 0) return JSON.parse(cleaned.slice(start, index + 1));
+    }
+    throw new Error('模型返回 JSON 不完整');
+  }
+}
+
+export function hasModelPlaceholder(value) {
+  if (typeof value === 'string') return /^(string|number|object|array|boolean|null|undefined)$/i.test(value.trim()) || value.trim().toLowerCase() === 'n/a';
+  if (Array.isArray(value)) return value.some(hasModelPlaceholder);
+  if (value && typeof value === 'object') return Object.values(value).some(hasModelPlaceholder);
+  return false;
 }
 
 export function compactProfile(profile = {}) {

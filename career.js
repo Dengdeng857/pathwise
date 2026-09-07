@@ -58,21 +58,11 @@ function unique(items) {
 }
 
 function hasModelPlaceholder(value) {
-  if (typeof value === 'string') return /^(string|number|object|array|boolean|null|undefined)$/i.test(value.trim()) || value.trim().toLowerCase() === 'n/a';
-  if (Array.isArray(value)) return value.some(hasModelPlaceholder);
-  if (value && typeof value === 'object') return Object.values(value).some(hasModelPlaceholder);
-  return false;
+  return window.PathwiseModel.hasModelPlaceholder(value);
 }
 
 function validatePlanResult(result) {
-  if (!result || typeof result !== 'object') throw new Error('模型返回不是规划对象');
-  const required = ['profile', 'summary', 'currentRoles', 'graduationRoles', 'gaps', 'actions', 'actionGuides', 'stages'];
-  if (required.some(key => !(key in result))) throw new Error('模型返回缺少规划字段');
-  if (hasModelPlaceholder(result)) throw new Error('模型把 JSON 示例占位符当成了规划内容');
-  const lists = ['currentRoles', 'graduationRoles', 'gaps', 'actions', 'actionGuides', 'stages'];
-  if (lists.some(key => !Array.isArray(result[key]) || !result[key].length)) throw new Error('模型规划内容为空');
-  if (result.actions.some(item => typeof item !== 'string' || item.trim().length < 4)) throw new Error('模型行动项无效');
-  return result;
+  return window.PathwiseModel.validatePlanShape(result);
 }
 
 let profile = hasStoredProfile
@@ -94,7 +84,7 @@ let plan = readJSON(STORAGE.plan, null);
 if (plan) {
   // Never render a plan cached by an older build if it contains schema
   // placeholders (for example, the literal value "string").
-  if (hasModelPlaceholder(plan) || typeof plan.profile !== 'string' || typeof plan.summary !== 'string') {
+  try { validatePlanResult(plan); } catch (_) {
     plan = null;
     localStorage.removeItem(STORAGE.plan);
     localStorage.removeItem(STORAGE.tasks);
@@ -105,7 +95,13 @@ if (plan) {
 if (plan) {
   const planText = JSON.stringify([plan.profile, plan.summary, plan.currentRoles, plan.graduationRoles]);
   const targetKey = /安全/.test(profile.target) ? '安全' : profile.target.replace(/工程师|产品经理|经理|实习生|专员/g, '').trim();
-  if (targetKey && !planText.toLowerCase().includes(targetKey.toLowerCase())) plan = null;
+  if (targetKey && !planText.toLowerCase().includes(targetKey.toLowerCase())) {
+    plan = null;
+    localStorage.removeItem(STORAGE.plan);
+    localStorage.removeItem(STORAGE.tasks);
+    localStorage.removeItem(STORAGE.taskEvents);
+    localStorage.removeItem(STORAGE.taskProofs);
+  }
 }
 let completedTasks = new Set(readJSON(STORAGE.tasks, []));
 let taskEvents = readJSON(STORAGE.taskEvents, {});
@@ -391,6 +387,17 @@ function renderPlanDelta(previousPlan, nextPlan, sourceLabel = '新信息') {
   } else if (previousGap && nextGap && previousGap !== nextGap) {
     title = '行动优先级已重新排序';
     text = `原先最需要补的是“${compact(previousGap, 24)}”，现在更应该先处理“${compact(nextGap, 30)}”。这是因为新信息改变了证据权重。`;
+  } else if (previousPlan) {
+    const oldTasks = window.PathwiseModel.getPlanTasks(previousPlan);
+    const newTasks = window.PathwiseModel.getPlanTasks(nextPlan);
+    const oldWeight = oldTasks.reduce((sum, task) => sum + task.effort, 0);
+    const newWeight = newTasks.reduce((sum, task) => sum + task.effort, 0);
+    const oldFirst = oldTasks[0]?.title;
+    const newFirst = newTasks[0]?.title;
+    if (oldWeight !== newWeight || oldFirst !== newFirst) {
+      title = '路径难度已重新估算';
+      text = `新信息让行动总投入从 ${oldWeight} 点调整为 ${newWeight} 点，当前先做“${compact(newFirst || '下一步行动', 34)}”。`;
+    }
   }
   $('#planDeltaTitle').textContent = title;
   $('#planDeltaText').textContent = text;
@@ -490,6 +497,7 @@ function syncTaskUI() {
   const tasks = $$('.task-toggle');
   const done = tasks.filter(task => task.classList.contains('done')).length;
   $('#doneCount').textContent = done;
+  if ($('#verifiedCount')) $('#verifiedCount').textContent = tasks.filter(task => task.classList.contains('verified')).length;
   $('#pendingCount').textContent = Math.max(0, tasks.length - done);
   const weighted = window.PathwiseModel.getWeightedProgress(plan || makeLocalPlan(), completedTasks, verifiedTasks);
   const progress = weighted.percent;
@@ -603,15 +611,28 @@ async function recalculate(successMessage = '路径已经根据新信息更新�
     return true;
   } catch (error) {
     const reason = error.name === 'AbortError' ? '模型响应超时' : error.message;
-    plan = makeLocalPlan(profile, reason);
+    let keptPrevious = false;
+    try {
+      validatePlanResult(previousPlan);
+      const previousText = JSON.stringify([previousPlan.profile, previousPlan.summary, previousPlan.currentRoles, previousPlan.graduationRoles]);
+      const targetKey = String(profile.target || '').replace(/工程师|产品经理|经理|实习生|专员/g, '').trim();
+      keptPrevious = Boolean(targetKey && previousText.toLowerCase().includes(targetKey.toLowerCase()));
+    } catch (_) {}
+    plan = keptPrevious ? { ...previousPlan, status: 'stale', staleReason: reason } : makeLocalPlan(profile, reason);
     recordPlanVersion(previousPlan, plan, '这次更新', 'local');
     writeJSON(STORAGE.plan, plan);
     renderAll(plan);
-    renderPlanDelta(previousPlan, plan, '这次更新');
+    if (keptPrevious) {
+      $('#planDeltaTitle').textContent = '暂时保留上次有效路径';
+      $('#planDeltaText').textContent = `这次智能规划没有完成（${compact(reason, 58)}）。原有路径没有被覆盖，等服务恢复后可以再次更新。`;
+      $('#planDelta').hidden = false;
+    } else {
+      renderPlanDelta(previousPlan, plan, '这次更新');
+    }
     finishProgress('已保留当前路径');
-    showToast('新信息已保存，当前路径保持可用');
-    companionSay(`智能规划暂时没有完成响应，但你的信息没有丢失，可以稍后再次更新。`);
-    setAIStatus('路径已更新 · 使用本地规划', false);
+    showToast(keptPrevious ? '智能规划未完成，已保留上次有效路径' : '新信息已保存，当前路径保持可用');
+    companionSay(keptPrevious ? '这次响应没有通过校验，我先保护好上一版路径，稍后可以重试。' : '智能规划暂时没有完成响应，但你的信息没有丢失，可以稍后再次更新。');
+    setAIStatus(keptPrevious ? '暂时保留上次路径 · 稍后重试' : '路径已更新 · 使用本地规划', false);
     console.warn('Pathwise plan request failed:', error);
     return false;
   }

@@ -4,6 +4,25 @@
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
   const unique = items => [...new Set(items.filter(Boolean).map(item => String(item).trim()).filter(Boolean))];
 
+  function hasModelPlaceholder(value) {
+    if (typeof value === 'string') return /^(string|number|object|array|boolean|null|undefined)$/i.test(value.trim()) || value.trim().toLowerCase() === 'n/a';
+    if (Array.isArray(value)) return value.some(hasModelPlaceholder);
+    if (value && typeof value === 'object') return Object.values(value).some(hasModelPlaceholder);
+    return false;
+  }
+
+  function validatePlanShape(value) {
+    const required = ['profile', 'summary', 'currentRoles', 'graduationRoles', 'gaps', 'actions', 'actionGuides', 'stages'];
+    if (!value || typeof value !== 'object' || required.some(key => !(key in value))) throw new Error('模型返回缺少规划字段');
+    if (hasModelPlaceholder(value)) throw new Error('模型把 JSON 示例占位符当成了规划内容');
+    if (typeof value.profile !== 'string' || !value.profile.trim() || typeof value.summary !== 'string' || !value.summary.trim()) throw new Error('模型画像或总结为空');
+    if (required.slice(2).some(key => !Array.isArray(value[key]) || !value[key].length)) throw new Error('模型规划内容为空');
+    if (value.actions.some(item => typeof item !== 'string' || item.trim().length < 4)) throw new Error('模型行动项无效');
+    if (value.actionGuides.some(item => !item || typeof item.title !== 'string' || item.title.trim().length < 4)) throw new Error('模型行动指导无效');
+    if (value.stages.some(item => !item || typeof item.title !== 'string' || !Array.isArray(item.tasks))) throw new Error('模型阶段结构无效');
+    return value;
+  }
+
   function guideFor(plan, title) {
     return (Array.isArray(plan?.actionGuides) ? plan.actionGuides : []).find(item => item && item.title === title) || {};
   }
@@ -71,5 +90,5 @@
     };
   }
 
-  global.PathwiseModel = { estimateEffort, getPlanTasks, getWeightedProgress };
+  global.PathwiseModel = { estimateEffort, getPlanTasks, getWeightedProgress, hasModelPlaceholder, validatePlanShape };
 })(window);
