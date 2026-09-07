@@ -57,6 +57,24 @@ function unique(items) {
   return [...new Set(items.filter(Boolean))];
 }
 
+function hasModelPlaceholder(value) {
+  if (typeof value === 'string') return /^(string|number|object|array|boolean|null|undefined)$/i.test(value.trim()) || value.trim().toLowerCase() === 'n/a';
+  if (Array.isArray(value)) return value.some(hasModelPlaceholder);
+  if (value && typeof value === 'object') return Object.values(value).some(hasModelPlaceholder);
+  return false;
+}
+
+function validatePlanResult(result) {
+  if (!result || typeof result !== 'object') throw new Error('模型返回不是规划对象');
+  const required = ['profile', 'summary', 'currentRoles', 'graduationRoles', 'gaps', 'actions', 'actionGuides', 'stages'];
+  if (required.some(key => !(key in result))) throw new Error('模型返回缺少规划字段');
+  if (hasModelPlaceholder(result)) throw new Error('模型把 JSON 示例占位符当成了规划内容');
+  const lists = ['currentRoles', 'graduationRoles', 'gaps', 'actions', 'actionGuides', 'stages'];
+  if (lists.some(key => !Array.isArray(result[key]) || !result[key].length)) throw new Error('模型规划内容为空');
+  if (result.actions.some(item => typeof item !== 'string' || item.trim().length < 4)) throw new Error('模型行动项无效');
+  return result;
+}
+
 let profile = hasStoredProfile
   ? { ...DEFAULT_PROFILE, ...readJSON(STORAGE.profile, {}) }
   : { ...DEFAULT_PROFILE, stage: '', school: '', major: '', target: '', experience: '', updates: [], evidence: [] };
@@ -257,7 +275,7 @@ async function requestStreamingPlan(body) {
       const parsed = JSON.parse(value);
       return typeof parsed === 'string' ? JSON.parse(parsed) : parsed;
     };
-    try { return parseCandidate(cleaned); } catch (_) {}
+    try { return validatePlanResult(parseCandidate(cleaned)); } catch (_) {}
     const extractBalanced = (source, start) => {
       const opening = source[start];
       const closing = opening === '[' ? ']' : '}';
@@ -288,7 +306,7 @@ async function requestStreamingPlan(body) {
       if (!candidate) continue;
       try {
         const value = parseCandidate(candidate);
-        if (value && (value.profile || value.currentRoles || value.stages)) return value;
+        if (value && (value.profile || value.currentRoles || value.stages)) return validatePlanResult(value);
       } catch (_) {}
     }
     console.warn('Pathwise planner raw response prefix:', cleaned.slice(0, 800));
@@ -339,6 +357,7 @@ function renderDecision(currentPlan) {
   $('#pulseGap').textContent = gap;
   $('#pulseUpdate').textContent = profile.evidence.length ? '材料已进入' : '等你记录';
   $('#heroState').textContent = `${awaitingProof ? '待补成果：' : '当前规划重点：'}${next?.dataset.task || profile.target || '你的下一段职业方向'}`;
+  $('.hero-state button').textContent = awaitingProof ? '补充成果 →' : next ? '打开行动 →' : '记录进展 →';
   $('#decisionCta').textContent = awaitingProof ? '补充行动成果 →' : next ? '打开这一步 →' : '记录新进展 →';
   $('#decisionCta').dataset.task = next?.dataset.task || '';
   const moodText = { steady: '今天按一个小步推进就很好。', anxious: '先只做最小的一步，不需要今天解决全部问题。', tired: '今天可以只整理材料，完成比强撑更重要。' }[profile.mood] || '';
@@ -375,9 +394,21 @@ function recordPlanVersion(previousPlan, nextPlan, sourceLabel, mode = 'ai') {
   const nextGap = nextPlan.gaps?.[0] || '';
   const previousAction = previousPlan?.actions?.[0] || '';
   const nextAction = nextPlan.actions?.[0] || '';
-  if (previousPlan && previousRole === nextRole && previousGap === nextGap && previousAction === nextAction) return;
+  const previousProgress = previousPlan ? window.PathwiseModel.getWeightedProgress(previousPlan, completedTasks, verifiedTasks) : null;
+  const nextProgress = window.PathwiseModel.getWeightedProgress(nextPlan, completedTasks, verifiedTasks);
+  const previousPath = previousProgress?.tasks.map(task => `${task.title}:${task.effort}`).join('|') || '';
+  const nextPath = nextProgress.tasks.map(task => `${task.title}:${task.effort}`).join('|');
+  if (previousPlan && previousRole === nextRole && previousGap === nextGap && previousAction === nextAction && previousPath === nextPath) return;
   const history = readJSON(STORAGE.history, []);
-  history.push({ at:new Date().toISOString(), source:sourceLabel, mode, role:nextRole, previousRole, gap:nextGap, previousGap, action:nextAction, previousAction });
+  history.push({
+    at:new Date().toISOString(), source:sourceLabel, mode,
+    role:nextRole, previousRole, gap:nextGap, previousGap,
+    action:nextAction, previousAction,
+    progress:nextProgress.percent,
+    previousProgress:previousProgress?.percent ?? null,
+    totalWeight:nextProgress.totalWeight,
+    previousTotalWeight:previousProgress?.totalWeight ?? null
+  });
   writeJSON(STORAGE.history, history.slice(-20));
 }
 
@@ -508,6 +539,21 @@ function renderGrowth() {
 }
 
 function renderAll(currentPlan) {
+  if (!hasStoredProfile) {
+    plan = null;
+    renderProfile(null);
+    $('#stageList').innerHTML = '';
+    $('#pendingCount').textContent = '0';
+    $('#sideProgressValue').textContent = '0%';
+    $('#sideProgressFill').style.width = '0%';
+    $('#weeklyProgress').textContent = '建立画像后开始计算';
+    $('#focusTitle').textContent = '先建立你的职业画像';
+    $('#focusMeta').textContent = '上传简历，或用一分钟填写当前阶段与目标。';
+    $('#sideFocusBtn').innerHTML = '开始建立 <span>→</span>';
+    $('#heroState').textContent = '先告诉小径：你现在在哪，毕业想去哪里？';
+    $('.hero-state button').textContent = '开始建立 →';
+    return;
+  }
   plan = currentPlan || makeLocalPlan();
   renderProfile(plan);
   renderRoles(plan);
@@ -533,7 +579,7 @@ async function recalculate(successMessage = '路径已经根据新信息更新�
   startProgress();
   try {
     const result = await requestStreamingPlan(profile);
-    if (!result.currentRoles || !result.stages) throw new Error('模型返回缺少规划字段');
+    validatePlanResult(result);
     plan = { ...result, source: result.source || 'ai' };
     recordPlanVersion(previousPlan, plan, '这次更新', plan.source);
     writeJSON(STORAGE.plan, plan);
@@ -767,6 +813,7 @@ function bindEvents() {
   }));
 
   $('#sideFocusBtn').addEventListener('click', () => {
+    if (!hasStoredProfile) return $('#editProfile').click();
     const first = $('.task-toggle:not(.verified)');
     if (first) {
       setWorkspaceView('route');
@@ -782,6 +829,12 @@ function bindEvents() {
     setWorkspaceView('evidence');
     $('[data-compose="update"]').click();
     setTimeout(() => $('#updateInput').focus(), 350);
+  });
+  $('.hero-state button').addEventListener('click', () => {
+    if (!hasStoredProfile) return $('#editProfile').click();
+    const task = $('#decisionCta').dataset.task;
+    if (task) return openActionGuide(task);
+    setWorkspaceView('evidence');
   });
 
   $$('.checkin button').forEach(button => button.addEventListener('click', () => {

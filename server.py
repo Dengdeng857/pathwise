@@ -47,6 +47,12 @@ def local_plan(profile, reason=''):
 
 def normalize(raw, profile):
     if not isinstance(raw,dict): return local_plan(profile,'模型返回不是 JSON 对象')
+    def has_placeholder(value):
+        if isinstance(value,str): return value.strip().lower() in {'string','number','object','array','boolean','null','undefined','n/a'}
+        if isinstance(value,list): return any(has_placeholder(item) for item in value)
+        if isinstance(value,dict): return any(has_placeholder(item) for item in value.values())
+        return False
+    if has_placeholder(raw): return local_plan(profile,'模型把 JSON 示例占位符当成了规划内容')
     fallback=local_plan(profile)
     for key in ('currentRoles','graduationRoles','gaps','actions','actionGuides','stages'):
         if not isinstance(raw.get(key),list) or not raw[key]: raw[key]=fallback[key]

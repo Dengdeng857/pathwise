@@ -142,7 +142,12 @@ const lastChange = history[history.length - 1];
 if (lastChange) {
   $('#rerouteNote').hidden = false;
   $('#rerouteTitle').textContent = lastChange.previousRole && lastChange.previousRole !== lastChange.role ? `${lastChange.previousRole} → ${lastChange.role}` : '行动优先级已更新';
-  $('#rerouteReason').textContent = lastChange.previousGap && lastChange.previousGap !== lastChange.gap ? `关键差距变为：${lastChange.gap}` : `下一站：${lastChange.action || next.title}`;
+  const progressChanged = Number.isFinite(lastChange.previousProgress) && lastChange.previousProgress !== lastChange.progress;
+  $('#rerouteReason').textContent = lastChange.previousGap && lastChange.previousGap !== lastChange.gap
+    ? `关键差距变为：${lastChange.gap}`
+    : progressChanged
+      ? `路线重估 ${lastChange.previousProgress}% → ${lastChange.progress}%：行动难度或顺序已改变`
+      : `下一站：${lastChange.action || next.title}`;
   $('#mapUpdated').textContent = `${lastChange.mode === 'ai' ? 'AI' : '本地规划'} · ${new Date(lastChange.at).toLocaleDateString('zh-CN')}`;
 }
 showStation(current, currentIndex, currentIndex ? 'current' : 'origin');

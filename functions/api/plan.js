@@ -1,5 +1,20 @@
 import { chat, compactProfile, json, parseModelJson, retrieveCases, upstreamChat } from './_shared.js';
 
+function hasPlaceholder(value) {
+  if (typeof value === 'string') return /^(string|number|object|array|boolean|null|undefined)$/i.test(value.trim()) || value.trim().toLowerCase() === 'n/a';
+  if (Array.isArray(value)) return value.some(hasPlaceholder);
+  if (value && typeof value === 'object') return Object.values(value).some(hasPlaceholder);
+  return false;
+}
+
+function validatePlan(value) {
+  const required = ['profile','summary','currentRoles','graduationRoles','gaps','actions','actionGuides','stages'];
+  if (!value || typeof value !== 'object' || required.some(key => !(key in value))) throw new Error('模型规划字段不完整');
+  if (hasPlaceholder(value)) throw new Error('模型返回了 JSON 示例占位符');
+  if (required.slice(2).some(key => !Array.isArray(value[key]) || !value[key].length)) throw new Error('模型规划列表为空');
+  return value;
+}
+
 export async function onRequestPost({ request, env }) {
   try {
     const profile = compactProfile(await request.json());
@@ -33,7 +48,7 @@ export async function onRequestPost({ request, env }) {
       return new Response(readable, { status: 200, headers: { 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-cache, no-transform', 'X-Accel-Buffering': 'no', Connection: 'keep-alive' } });
     }
     const content = await chat(env, messages, 4000, { stream: true });
-    const result = parseModelJson(content);
+    const result = validatePlan(parseModelJson(content));
     result.source = 'ai';
     result.status = 'ready';
     result.caseReferences = cases;
