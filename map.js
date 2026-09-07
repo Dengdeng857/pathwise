@@ -193,10 +193,13 @@ function drawStation(node, index, [x, y], status) {
   const group = svg('g', { class:`route-station ${status} ${node.kind || ''}`.trim(), 'data-index':index, transform:`translate(${x} ${y})`, tabindex:'0', role:'button', 'aria-label':node.title });
   group.style.setProperty('--station-delay', `${180 + index * 75}ms`);
   group.append(svg('circle', { r:status === 'current' ? 16 : 12, class:'station-ring' }), svg('circle', { r:status === 'current' ? 7 : 5, class:'station-core' }));
-  const label = svg('text', { x:'0', y:'-24', 'text-anchor':x > 820 ? 'end' : 'middle', class:'station-label' });
+  const labelBelow = !node.kind && index % 2 === 0 && node.type !== 'goal';
+  const labelY = labelBelow ? 37 : -24;
+  const label = svg('text', { x:'0', y:labelY, 'text-anchor':x > 820 ? 'end' : 'middle', class:'station-label' });
   label.textContent = compact(node.title, 20);
   group.appendChild(label);
   const code = svg('text', { x:'0', y:'27', 'text-anchor':'middle', class:'station-code' });
+  code.setAttribute('y', labelBelow ? '53' : '27');
   code.textContent = node.type === 'goal' ? 'GOAL' : node.type === 'branch' ? (node.code || 'ALT') : String(index).padStart(2, '0');
   group.appendChild(code);
   group.addEventListener('click', () => showStation(node, index, status));

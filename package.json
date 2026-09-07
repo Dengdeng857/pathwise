@@ -5,7 +5,7 @@
   "description": "Evidence-driven AI career planning companion",
   "scripts": {
     "build": "node -e \"console.log('Pathwise static build ready')\"",
-    "test": "node tests/path-model.test.js && node tests/commitment-model.test.js && node tests/game-feedback-model.test.js && node tests/api-shared.test.mjs && node tests/continuity-model.test.mjs && node tests/api-trajectory.test.mjs && node tests/api-profile.test.mjs && node tests/functions-imports.test.mjs && node tests/ui-contract.test.mjs && node tests/report-contract.test.mjs && node tests/growth-share-contract.test.mjs && node tests/privacy-accessibility.test.mjs && node tests/release-smoke.test.mjs",
+    "test": "python3 tests/local-profile.test.py && node tests/path-model.test.js && node tests/commitment-model.test.js && node tests/game-feedback-model.test.js && node tests/api-shared.test.mjs && node tests/continuity-model.test.mjs && node tests/api-trajectory.test.mjs && node tests/api-profile.test.mjs && node tests/functions-imports.test.mjs && node tests/ui-contract.test.mjs && node tests/report-contract.test.mjs && node tests/growth-share-contract.test.mjs && node tests/privacy-accessibility.test.mjs && node tests/release-smoke.test.mjs",
     "deploy": "wrangler pages deploy . --project-name pathwise-web"
   },
   "dependencies": {

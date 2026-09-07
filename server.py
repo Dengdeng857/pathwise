@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import json, os, re, io, cgi, base64, mimetypes, subprocess
+import json, os, re, io, cgi, base64, mimetypes, subprocess, unicodedata
 from http.server import HTTPServer, ThreadingHTTPServer, SimpleHTTPRequestHandler
 from urllib.request import Request, urlopen
 
@@ -241,12 +241,17 @@ def extract_document(filename, content, content_type):
 
 def local_profile_extract(content, current=None):
     """Conservative local resume extraction for offline/local demos."""
-    text=' '.join(str(content or '').replace('\x00',' ').split())
-    stage_match=re.search(r'(本科\s*[大研]?[一二三四上下]?|硕士\s*[一二三]?|博士\s*[一二三]?|20\d{2}\s*届)',text)
+    # PDF text often uses CJK compatibility ideographs (for example ⼤/⼯).
+    # Normalize them before matching so extraction behaves like normal text.
+    text=' '.join(unicodedata.normalize('NFKC', str(content or '')).replace('\x00',' ').split())
+    # Prefer graduate status when a resume contains both undergraduate and
+    # graduate education (common for current master's students).  This keeps
+    # the onboarding stage aligned with the user's present decision point.
+    stage_match=re.search(r'(研究生\s*[一二三四]?|硕士\s*(?:研)?[一二三四上下]?|博士\s*(?:博)?[一二三四上下]?|本科\s*[大研]?[一二三四上下]?|20\d{2}\s*届)',text)
     school_match=re.search(r'(985|211|双一流|北京大学|清华大学|复旦大学|上海交通大学|浙江大学|中国人民大学|北京航空航天大学|北京理工大学)',text)
-    major_match=re.search(r'(?:专业|主修|就读于)[：:\s]*([\u4e00-\u9fffA-Za-z0-9/+· -]{2,24})',text)
+    major_match=re.search(r'(信息安全|网络空间安全|软件工程|计算机科学与技术|数据科学|人工智能|电子信息|自动化|计算机)',text)
     if not major_match:
-        major_match=re.search(r'(信息安全|网络空间安全|软件工程|计算机科学与技术|计算机|数据科学|人工智能|电子信息|自动化)',text)
+        major_match=re.search(r'专业[：:\s]*([\u4e00-\u9fffA-Za-z0-9/+· -]{2,24})',text)
     signals=[]
     for sentence in re.split(r'[。；;.!！？]',text):
         sentence=sentence.strip()

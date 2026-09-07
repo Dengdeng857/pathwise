@@ -523,3 +523,4 @@ body.night { --ink: #e9f2ef; --muted: #9dafaa; --faint: #829691; --paper: #111d1
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
+.route-terrain path{stroke:rgba(186,225,204,.11);stroke-width:1.5}.terrain-now{fill:rgba(77,139,112,.12)}.terrain-build{fill:rgba(89,123,139,.1)}.terrain-goal{fill:rgba(142,119,158,.11)}.route-grid{opacity:.24}.route-landmarks{opacity:.8}.route-river{fill:none;stroke:url(#routeRiver);stroke-width:18;stroke-linecap:round}.route-ridge{fill:none;stroke:rgba(207,230,212,.12);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}.route-landmarks circle{fill:#bce4c8;opacity:.32}
