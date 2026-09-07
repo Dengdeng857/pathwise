@@ -21,7 +21,7 @@
         <button class="side-link" data-target="roles"><span class="nav-icon">⌁</span>岗位地图</button>
         <button class="side-link" data-target="route"><span class="nav-icon">✓</span>行动路径<span class="nav-count" id="pendingCount">3</span></button>
         <button class="side-link" data-target="evidence"><span class="nav-icon">＋</span>进展证据</button>
-        <button class="side-link" data-target="growth"><span class="nav-icon">↗</span>成长报告</button>
+        <a class="side-link side-anchor" href="map.html"><span class="nav-icon">⌖</span>进步地图</a>
       </nav>
       <div class="side-focus"><span class="kicker">NEXT STEP</span><strong id="focusTitle">完成第一个规划行动</strong><p id="focusMeta">每一步都会让下一次规划更贴近你。</p><button id="sideFocusBtn" type="button">打开行动 <span>→</span></button></div>
       <button class="reset-path" type="button"><span>↻</span> 重置我的路径</button>
@@ -103,7 +103,7 @@
       <section class="growth-report page-section" id="growth">
         <div class="growth-head"><div><span class="kicker">LIVING REPORT</span><h2>这份报告，会和你一起生长</h2><p>它只认可真实完成的行动和留下的证据。</p></div><div class="growth-score"><strong id="growthScore">0</strong><span>/ 100<br>路径完成度</span></div></div>
         <div class="growth-path" id="growthTree"></div>
-        <div class="growth-foot"><span id="growthHint">完成第一个行动，点亮路径的下一站。</span><button class="text-button" id="growthExport" type="button">导出成长报告 <span>↓</span></button></div>
+        <div class="growth-foot"><span id="growthHint">完成第一个行动，点亮路径的下一站。</span><div class="growth-actions"><a class="text-button" href="map.html">进入进步地图 <span>→</span></a><button class="text-button" id="growthExport" type="button">导出成长报告 <span>↓</span></button></div></div>
       </section>
     </section>
   </main>
