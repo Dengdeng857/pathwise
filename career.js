@@ -92,6 +92,17 @@ profile.updates = unique(profile.updates.map(String).filter(update => {
 profile.mood = profile.mood || '';
 let plan = readJSON(STORAGE.plan, null);
 if (plan) {
+  // Never render a plan cached by an older build if it contains schema
+  // placeholders (for example, the literal value "string").
+  if (hasModelPlaceholder(plan) || typeof plan.profile !== 'string' || typeof plan.summary !== 'string') {
+    plan = null;
+    localStorage.removeItem(STORAGE.plan);
+    localStorage.removeItem(STORAGE.tasks);
+    localStorage.removeItem(STORAGE.taskEvents);
+    localStorage.removeItem(STORAGE.taskProofs);
+  }
+}
+if (plan) {
   const planText = JSON.stringify([plan.profile, plan.summary, plan.currentRoles, plan.graduationRoles]);
   const targetKey = /安全/.test(profile.target) ? '安全' : profile.target.replace(/工程师|产品经理|经理|实习生|专员/g, '').trim();
   if (targetKey && !planText.toLowerCase().includes(targetKey.toLowerCase())) plan = null;
