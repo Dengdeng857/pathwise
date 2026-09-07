@@ -22,7 +22,7 @@ def load_local_env():
                 key,value=line.split('=',1)
                 key=key.strip(); value=value.strip().strip('"').strip("'")
                 if key and value:
-                    os.environ[key]=value
+                    os.environ.setdefault(key,value)
     except OSError as error:
         print('Could not read .env:',error)
 
@@ -42,7 +42,7 @@ def local_plan(profile, reason=''):
         gaps_extra=['面试复盘与项目表达']
     else: gaps_extra=[]
     actions=['拆解 10 个目标岗位 JD','把一个项目补成用户与指标案例','准备一次目标岗位项目深挖']
-    action_guides=[{'title':actions[0],'why':'你需要先知道目标岗位真正要求什么，避免盲目投递。','steps':['收集 10 个近 30 天发布的 JD','标注重复出现的能力和产出','把最高频的 3 项写进简历'],'doneWhen':'完成一张岗位能力对照表'},{'title':actions[1],'why':'招聘方需要看到你能从问题走到结果，而不是只会做 Demo。','steps':['写清目标用户和原始问题','选一个主指标记录前后变化','补上一次取舍和失败复盘'],'doneWhen':'形成一页可讲 3 分钟的项目案例'},{'title':actions[2],'why':'项目深挖是验证产品思考和技术理解的最高频环节。','steps':['准备背景、目标、方案、指标四句话','为 AI 失败、成本和延迟准备答案','录音完成一次 15 分钟自问自答'],'doneWhen':'能在 3 分钟内讲清项目并回答追问'}]
+    action_guides=[{'title':actions[0],'why':'你需要先知道目标岗位真正要求什么，避免盲目投递。','steps':['收集 10 个近 30 天发布的 JD','标注重复出现的能力和产出','把最高频的 3 项写进简历'],'doneWhen':'完成一张岗位能力对照表','effort':2,'estimatedDays':2},{'title':actions[1],'why':'招聘方需要看到你能从问题走到结果，而不是只会做 Demo。','steps':['写清目标用户和原始问题','选一个主指标记录前后变化','补上一次取舍和失败复盘'],'doneWhen':'形成一页可讲 3 分钟的项目案例','effort':4,'estimatedDays':7},{'title':actions[2],'why':'项目深挖是验证产品思考和技术理解的最高频环节。','steps':['准备背景、目标、方案、指标四句话','为 AI 失败、成本和延迟准备答案','录音完成一次 15 分钟自问自答'],'doneWhen':'能在 3 分钟内讲清项目并回答追问','effort':3,'estimatedDays':3}]
     return {'source':'local','status':'degraded','reason':reason,'profile':f'{stage} · {school} {major}','summary':f'{exp} · 目标：{target}'+(f' · 最近进展：{updates[-1]}' if updates else ''),'currentRoles':[{'title':f'{target}实习生','match':78,'reason':'当前背景与岗位的技术理解要求有重合。'}],'graduationRoles':[{'title':f'{target}（应用方向）','match':64,'reason':'补齐真实业务和结果证据后，毕业时可重点投递。'}],'gaps':['真实业务实习','可量化项目结果','产品指标意识']+gaps_extra,'actions':actions,'actionGuides':action_guides,'stages':[{'title':f'拿到第一段 {target} 实习','why':'获得真实用户、需求和协作经验。','tasks':['筛选有真实用户的团队','完成 10 个高质量投递','复盘每次面试反馈'],'doneWhen':'拿到 offer 或完成 10 次有效面试'},{'title':f'补齐 {target} 的能力证据','why':'把项目从 Demo 变成可验证的业务案例。','tasks':['定义一个主指标','记录迭代前后变化','写一页复盘'],'doneWhen':'有一份可讲清目标、取舍、结果的案例'},{'title':f'冲刺毕业 {target} 岗','why':'用前两阶段证据匹配毕业岗位。','tasks':['整理作品集','每周模拟一次面试','针对 JD 补行业知识'],'doneWhen':'完成目标岗位的成套投递'}]}
 
 def normalize(raw, profile):
@@ -109,7 +109,7 @@ def make_plan(profile):
     key=openai_key if is_openai else (qwen_key if 'dashscope.aliyuncs.com' in base else nexus_key)
     model=os.environ.get('AI_MODEL') or ('gpt-4.1-mini' if is_openai else ('qwen-plus' if 'dashscope.aliyuncs.com' in base else DEFAULT_MODEL))
     if not key: return local_plan(profile,'未配置 API Key')
-    schema='''只返回 JSON，不要 Markdown。结构必须为：{"profile":"string","summary":"string","currentRoles":[{"title":"string","match":0,"reason":"string"}],"graduationRoles":[{"title":"string","match":0,"reason":"string"}],"gaps":["string"],"actions":["string"],"actionGuides":[{"title":"string","why":"string","steps":["string","string","string"],"doneWhen":"string"}],"stages":[{"title":"string","why":"string","tasks":["string","string","string"],"doneWhen":"string"}]}。match 为 0-100 的整数，不要伪造录取概率。'''
+    schema='''只返回 JSON，不要 Markdown。结构必须为：{"profile":"string","summary":"string","currentRoles":[{"title":"string","match":0,"reason":"string"}],"graduationRoles":[{"title":"string","match":0,"reason":"string"}],"gaps":["string"],"actions":["string"],"actionGuides":[{"title":"string","why":"string","steps":["string","string","string"],"doneWhen":"string","effort":3,"estimatedDays":7}],"stages":[{"title":"string","why":"string","tasks":["string","string","string"],"doneWhen":"string"}]}。match 为 0-100 的整数，不要伪造录取概率。effort 为 1-5 整数：1 是半天内简单整理，3 是数天成果，5 是实习、比赛成绩或长期能力里程碑；estimatedDays 是实际预计天数。'''
     model_profile=compact_profile(profile)
     prompt=f'你是可信的应届生职业规划产品。根据用户画像、最近进展和证据材料，重新判断现在可投和毕业可达岗位。材料不是存档：必须说明它确认了什么能力、暴露了什么缺口，以及计划哪些阶段需要调整。最近进展中的明确事实优先级高于旧画像：如果用户说目标已转向某岗位，必须把 profile、currentRoles、graduationRoles、stages 全部改成新目标。面试失败要转成具体复盘缺口，而不是继续推荐旧方向。回答精炼，每个字段只保留对求职决策有用的信息。{schema}\n用户画像：{json.dumps(model_profile,ensure_ascii=False)}'
     try:
@@ -138,8 +138,18 @@ def make_plan(profile):
             print('AI request failed; using local plan:', reason)
             return local_plan(profile, reason)
 
+def estimate_action_effort(action):
+    text=str(action or '').lower()
+    if re.search(r'实习|offer|录用|获奖|比赛名次|论文|cve|cnvd|正式上线|真实用户',text): return 5,21
+    if re.search(r'完整项目|作品集|代码审计|漏洞|案例|开源|量化结果|外部反馈',text): return 4,7
+    if re.search(r'模拟面试|复盘|投递|系统学习|课程|训练',text): return 3,3
+    if re.search(r'整理|修改|拆解|收集|筛选|标注|准备',text): return 2,2
+    return 3,4
+
 def local_action_guide(action, profile, reason=''):
     target=str(profile.get('target') or '目标岗位')
+    effort,estimated_days=estimate_action_effort(action)
+    estimated_time={2:'2-4 小时，可分两次完成',3:'约 2-4 天，每天投入 1-2 小时',4:'约 1 周，需要形成完整交付',5:'约 3 周或更久，按里程碑持续推进'}.get(effort,'按个人节奏完成')
     return {
         'title': action,
         'why': f'这项行动会为“{target}”补充一条可验证的能力证据。',
@@ -149,7 +159,9 @@ def local_action_guide(action, profile, reason=''):
             '整理过程、结果和一次复盘，形成可在面试中讲述的材料'
         ],
         'resources': ['目标岗位 JD', '个人项目或经历材料', '一页复盘模板'],
-        'estimatedTime': '2-4 小时，可拆成 2 次完成',
+        'estimatedTime': estimated_time,
+        'estimatedDays': estimated_days,
+        'effort': effort,
         'doneWhen': '产出一份可查看、可复述、可提交的成果',
         'evidence': '完成后上传文档、截图、链接或复盘文字，作为这项行动的证据。',
         'source': 'local',
@@ -168,7 +180,7 @@ def make_action_guide(payload):
     model=os.environ.get('AI_MODEL') or ('gpt-4.1-mini' if is_openai else ('qwen-plus' if 'dashscope.aliyuncs.com' in base else DEFAULT_MODEL))
     if not key:
         return local_action_guide(action,profile,'未配置 API Key')
-    schema='''只返回 JSON，不要 Markdown。结构必须为：{"title":"string","why":"string","steps":["string"],"resources":["string"],"estimatedTime":"string","doneWhen":"string","evidence":"string"}。steps 必须是 3-5 个具体动作；不得虚构链接、招聘信息或用户经历。'''
+    schema='''只返回 JSON，不要 Markdown。结构必须为：{"title":"string","why":"string","steps":["string"],"resources":["string"],"estimatedTime":"string","estimatedDays":3,"effort":3,"doneWhen":"string","evidence":"string"}。steps 必须是 3-5 个具体动作；不得虚构链接、招聘信息或用户经历。effort 为 1-5 整数，按实际投入与难度估算；estimatedDays 为预计天数。'''
     prompt=f'''你是应届生职业行动教练。请只深化一个行动项，不要重新生成整份职业规划。指导必须结合用户阶段、目标岗位、已有经历、最近进展和证据；写到用户现在就能照着做的程度。{schema}\n行动项：{action}\n用户画像：{json.dumps(profile,ensure_ascii=False)}'''
     request_payload={'model':model,'messages':[{'role':'user','content':prompt}],'temperature':0.2,'max_tokens':900,'stream':False}
     if not is_openai: request_payload['enable_thinking']=False
@@ -181,6 +193,10 @@ def make_action_guide(payload):
             result[field]=str(result.get(field) or fallback[field])
         for field in ('steps','resources'):
             if not isinstance(result.get(field),list) or not result[field]: result[field]=fallback[field]
+        try: result['effort']=max(1,min(5,int(result.get('effort',fallback['effort']))))
+        except (TypeError,ValueError): result['effort']=fallback['effort']
+        try: result['estimatedDays']=max(1,int(result.get('estimatedDays',fallback['estimatedDays'])))
+        except (TypeError,ValueError): result['estimatedDays']=fallback['estimatedDays']
         result['source']='ai'; return result
     except Exception as error:
         print('Action guide request failed; using local guide:',error)

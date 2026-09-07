@@ -13,6 +13,7 @@ const profile = read('pathwiseProfile', {});
 const storedPlan = read('pathwisePlan', {});
 const plan = profile.stage && profile.target ? storedPlan : {};
 const completed = new Set(read('pathwiseTasks', []));
+const verified = new Set(read('pathwiseTaskProofs', []));
 const history = read('pathwisePlanHistory', []);
 const fallback = {
   stages: [
@@ -28,7 +29,11 @@ const roles = Array.isArray(plan.graduationRoles) && plan.graduationRoles.length
 const guides = Array.isArray(plan.actionGuides) ? plan.actionGuides : [];
 const rawDestination = String(roles[0]?.title || profile.target || '毕业目标');
 const destination = rawDestination.replace(/^（[^）]+）$/, '').trim() || profile.target || '毕业目标';
-const taskNodes = stages.flatMap((stage, stageIndex) => (stage.tasks || []).slice(0, 2).map(title => ({ title, stage, stageIndex, type:'action' }))).slice(0, 5);
+const taskNodes = stages.flatMap((stage, stageIndex) => {
+  const source = stageIndex === 0 && Array.isArray(plan.actions) && plan.actions.length ? plan.actions : (stage.tasks || []);
+  return source.slice(0, 2).map(title => ({ title, stage, stageIndex, type:'action' }));
+}).slice(0, 5);
+const weightedProgress = window.PathwiseModel.getWeightedProgress(Object.keys(plan).length ? plan : fallback, completed, verified);
 const originStage = {
   title:'职业起点',
   why:profile.stage ? '基于你的阶段、专业和目标建立路径起点。' : '先提供阶段、专业和目标，AI 才能判断路径起点。',
@@ -39,12 +44,16 @@ const mainNodes = [
   ...taskNodes,
   { title:destination, stage:stages[2], type:'goal' }
 ];
-const coords = [[92,545], [255,480], [405,405], [545,335], [675,270], [800,205], [905,135]];
-while (mainNodes.length < 7) mainNodes.splice(-1, 0, { title:`推进阶段 ${mainNodes.length}`, stage:stages[Math.min(2, Math.floor(mainNodes.length / 2))], type:'action' });
-mainNodes.splice(7);
-const actionable = mainNodes.filter(node => node.type === 'action');
-const doneCount = actionable.filter(node => completed.has(node.title)).length;
-const currentIndex = profile.stage ? Math.min(mainNodes.length - 1, doneCount + 1) : 0;
+const baseCoords = [[92,545], [255,480], [405,405], [545,335], [675,270], [800,205], [905,135]];
+const taskEndRatio = title => {
+  const index = weightedProgress.tasks.findIndex(task => task.title === title);
+  if (index < 0 || !weightedProgress.totalWeight) return .5;
+  const through = weightedProgress.tasks.slice(0, index + 1).reduce((sum, task) => sum + task.effort, 0);
+  return through / weightedProgress.totalWeight;
+};
+const coords = mainNodes.map(node => node.type === 'origin' ? baseCoords[0] : node.type === 'goal' ? baseCoords[baseCoords.length - 1] : pointOnPolyline(baseCoords, taskEndRatio(node.title)));
+const firstPendingIndex = mainNodes.findIndex((node, index) => index > 0 && node.type === 'action' && !verified.has(node.title));
+const currentIndex = profile.stage ? (firstPendingIndex >= 0 ? firstPendingIndex : mainNodes.length - 1) : 0;
 const ns = 'http://www.w3.org/2000/svg';
 
 function svg(name, attrs = {}) {
@@ -53,6 +62,25 @@ function svg(name, attrs = {}) {
   return element;
 }
 function linePath(points) { return points.map(([x, y], index) => `${index ? 'L' : 'M'}${x} ${y}`).join(' '); }
+function pointOnPolyline(points, ratio) {
+  const partial = partialPolyline(points, ratio);
+  return partial[partial.length - 1];
+}
+function partialPolyline(points, ratio) {
+  if (ratio <= 0) return [points[0]];
+  if (ratio >= 1) return points;
+  const lengths = points.slice(1).map((point, index) => Math.hypot(point[0] - points[index][0], point[1] - points[index][1]));
+  const target = lengths.reduce((sum, length) => sum + length, 0) * ratio;
+  const result = [points[0]];
+  let walked = 0;
+  for (let index = 0; index < lengths.length; index += 1) {
+    if (walked + lengths[index] <= target) { result.push(points[index + 1]); walked += lengths[index]; continue; }
+    const segmentRatio = (target - walked) / lengths[index];
+    result.push([points[index][0] + (points[index + 1][0] - points[index][0]) * segmentRatio, points[index][1] + (points[index + 1][1] - points[index][1]) * segmentRatio]);
+    break;
+  }
+  return result;
+}
 function findGuide(title) { return guides.find(item => item.title === title) || {}; }
 function showStation(node, index, status) {
   const guide = findGuide(node.title);
@@ -81,9 +109,12 @@ function drawStation(node, index, [x, y], status) {
 }
 
 const lines = $('#routeLines');
-lines.appendChild(svg('path', { d:linePath(coords), class:'route-main-line' }));
-lines.appendChild(svg('path', { d:linePath(coords.slice(0, currentIndex + 1)), class:'route-traveled' }));
-const branchStart = coords[4];
+lines.appendChild(svg('path', { d:linePath(baseCoords), class:'route-main-line' }));
+const traveledPoints = partialPolyline(baseCoords, weightedProgress.percent / 100);
+lines.appendChild(svg('path', { d:linePath(traveledPoints), class:'route-traveled' }));
+const progressPoint = traveledPoints[traveledPoints.length - 1];
+if (profile.stage && weightedProgress.percent > 0 && weightedProgress.percent < 100) lines.appendChild(svg('circle', { cx:progressPoint[0], cy:progressPoint[1], r:'7', class:'route-live-marker' }));
+const branchStart = pointOnPolyline(baseCoords, .64);
 [{ role:roles[1], end:[915,330], color:'branch-a' }, { role:roles[2], end:[900,520], color:'branch-b' }]
   .filter(item => item.role?.title)
   .forEach((branch, index) => {
@@ -91,7 +122,10 @@ const branchStart = coords[4];
     lines.appendChild(svg('path', { d:linePath([branchStart, midpoint, branch.end]), class:`route-branch ${branch.color}` }));
     drawStation({ title:branch.role.title, stage:stages[2], type:'branch' }, mainNodes.length + index, branch.end, 'branch');
   });
-mainNodes.forEach((node, index) => drawStation(node, index, coords[index], index < currentIndex ? 'done' : index === currentIndex ? 'current' : 'future'));
+mainNodes.forEach((node, index) => {
+  const status = node.type === 'action' && verified.has(node.title) ? 'done' : node.type === 'action' && completed.has(node.title) ? 'proof-pending' : index === currentIndex ? 'current' : 'future';
+  drawStation(node, index, coords[index], status);
+});
 
 const current = mainNodes[currentIndex];
 const next = mainNodes[Math.min(mainNodes.length - 1, currentIndex + 1)];
@@ -99,10 +133,10 @@ $('#mapDestination').textContent = destination;
 $('#currentStop').textContent = current.title;
 $('#currentReason').textContent = current.stage?.why || '这是规划中的当前位置。';
 $('#nextStop').textContent = next.title;
-const percent = actionable.length ? Math.round(doneCount / actionable.length * 100) : 0;
+const percent = weightedProgress.percent;
 $('#routePercent').textContent = `${percent}%`;
 $('#routeProgressFill').style.width = `${percent}%`;
-$('#routeProgressMeta').textContent = `${doneCount} / ${actionable.length} 个行动完成`;
+$('#routeProgressMeta').textContent = weightedProgress.totalWeight ? `已获得 ${Number(weightedProgress.creditedWeight.toFixed(1))} / ${weightedProgress.totalWeight} 路径点` : '按行动难度与投入估算';
 $('#mapUpdated').textContent = plan.source === 'ai' ? 'AI 已根据最新画像生成' : '等待第一份智能规划';
 const lastChange = history[history.length - 1];
 if (lastChange) {

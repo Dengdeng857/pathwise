@@ -10,7 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="redesign.css">
 </head>
-<body>
+<body class="workspace-view-overview">
   <main class="app-shell">
     <aside class="side">
       <a class="logo" href="index.html" aria-label="Pathwise 首页"><b>P</b><span>pathwise</span><small>career companion</small></a>
@@ -23,7 +23,7 @@
       </nav>
       <div class="side-label side-tools-label">CAREER TOOLS</div>
       <a class="side-link side-anchor" href="lab.html"><span class="nav-icon">⇄</span>比较职业方向</a>
-      <div class="side-focus"><span class="kicker">NEXT STEP</span><strong id="focusTitle">完成第一个规划行动</strong><p id="focusMeta">每一步都会让下一次规划更贴近你。</p><button id="sideFocusBtn" type="button">打开行动 <span>→</span></button></div>
+      <div class="side-focus"><div class="side-progress-head"><span>路径进度</span><b id="sideProgressValue">0%</b></div><div class="side-progress-track"><i id="sideProgressFill"></i></div><small id="weeklyProgress">按行动难度与投入估算</small><span class="kicker">NEXT STEP</span><strong id="focusTitle">完成第一个规划行动</strong><p id="focusMeta">每一步都会让下一次规划更贴近你。</p><button id="sideFocusBtn" type="button">打开行动 <span>→</span></button></div>
       <button class="reset-path" type="button"><span>↻</span> 重置我的路径</button>
       <div class="user"><div class="avatar" id="avatarText">P</div><div><strong>我的职业路径</strong><small id="userMeta">进展自动保存</small></div><span class="save-dot" title="数据已保存"></span></div>
     </aside>
@@ -67,7 +67,7 @@
 
       <section class="decision-pulse" id="decisionPulse" aria-label="当前决策建议">
         <div class="pulse-copy"><span class="kicker">TODAY'S PLAN</span><h2 id="decisionTitle">今天，先完成一项规划行动</h2><p id="decisionReason">小径会根据你的目标、证据和进展，告诉你现在最值得做什么。</p><button class="pulse-cta" id="decisionCta" type="button">打开这一步 <span>→</span></button><div class="plan-delta" id="planDelta" hidden><span class="kicker">PLAN UPDATE</span><strong id="planDeltaTitle"></strong><p id="planDeltaText"></p></div><div class="checkin"><span>今天的状态</span><button type="button" data-mood="steady">稳稳推进</button><button type="button" data-mood="anxious">有点焦虑</button><button type="button" data-mood="tired">需要缓一缓</button><small id="moodNote"></small></div></div>
-        <div class="pulse-signals"><div><span>目标方向</span><strong id="pulseTarget">待分析</strong><small>你正在靠近的岗位</small></div><div><span>关键缺口</span><strong id="pulseGap">待分析</strong><small>最该优先补的证据</small></div><div><span>下一次更新</span><strong id="pulseUpdate">现在</strong><small>完成后重新规划</small></div></div>
+        <div class="pulse-signals"><div><span>目标方向</span><strong id="pulseTarget">待分析</strong><small>你正在靠近的岗位</small></div><div><span>关键缺口</span><strong id="pulseGap">待分析</strong><small>最该优先补的证据</small></div><div><span>真实证据</span><strong id="pulseUpdate">0 份</strong><small>成果会提高判断可信度</small></div></div>
       </section>
 
       <section class="role-section page-section" id="roles">
@@ -103,7 +103,7 @@
       </section>
 
       <section class="growth-report page-section" id="growth">
-        <div class="growth-head"><div><span class="kicker">LIVING REPORT</span><h2>这份报告，会和你一起生长</h2><p>它只认可真实完成的行动和留下的证据。</p></div><div class="growth-score"><strong id="growthScore">0</strong><span>/ 100<br>路径完成度</span></div></div>
+        <div class="growth-head"><div><span class="kicker">LIVING REPORT</span><h2>这份报告，会和你一起生长</h2><p>路径只因完成行动而推进；证据负责让 AI 的判断更可信。</p></div><div class="growth-score"><strong id="growthScore">0</strong><span>%<br>难度加权进度</span></div></div>
         <div class="growth-path" id="growthTree"></div>
         <div class="growth-foot"><span id="growthHint">完成第一个行动，点亮路径的下一站。</span><div class="growth-actions"><a class="text-button" href="map.html">进入进步地图 <span>→</span></a><button class="text-button" id="growthExport" type="button">导出成长报告 <span>↓</span></button></div></div>
       </section>
@@ -124,6 +124,7 @@
   <div class="modal-backdrop" id="resetModal"><div class="modal reset-modal" role="dialog" aria-modal="true"><button class="close modal-close" aria-label="关闭">×</button><span class="kicker">RESET PATH</span><h2>重新开始这条路径？</h2><p>将清除当前浏览器中的画像、行动、进展与证据。服务器配置和模型 Key 不受影响。</p><div class="modal-actions"><button class="text-button reset-cancel" type="button">保留当前数据</button><button class="danger reset-confirm" type="button">确认全部重置</button></div></div></div>
 
   <div class="toast" id="toast" role="status"></div>
+  <script src="path-model.js"></script>
   <script src="career.js"></script>
 </body>
 </html>

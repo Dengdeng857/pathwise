@@ -7,6 +7,8 @@ const STORAGE = {
   tasks: 'pathwiseTasks',
   guides: 'pathwiseActionGuides',
   history: 'pathwisePlanHistory',
+  taskEvents: 'pathwiseTaskEvents',
+  taskProofs: 'pathwiseTaskProofs',
   theme: 'pathwiseTheme'
 };
 const DEFAULT_PROFILE = {
@@ -32,8 +34,9 @@ function readJSON(key, fallback) {
 // onboarding state unless the user has added real progress or evidence.
 const storedProfile = readJSON(STORAGE.profile, null);
 const isSeededDemo = storedProfile && storedProfile.stage === DEFAULT_PROFILE.stage && storedProfile.school === DEFAULT_PROFILE.school && storedProfile.major === DEFAULT_PROFILE.major && storedProfile.target === DEFAULT_PROFILE.target && storedProfile.experience === DEFAULT_PROFILE.experience && !(storedProfile.updates || []).length && !(storedProfile.evidence || []).length;
-if (isSeededDemo) Object.values(STORAGE).filter(key => key !== STORAGE.theme).forEach(key => localStorage.removeItem(key));
-let hasStoredProfile = Boolean(localStorage.getItem(STORAGE.profile));
+const hasValidStoredProfile = storedProfile && ['stage', 'school', 'major', 'target'].every(key => String(storedProfile[key] || '').trim());
+if (isSeededDemo || (storedProfile && !hasValidStoredProfile)) Object.values(STORAGE).filter(key => key !== STORAGE.theme).forEach(key => localStorage.removeItem(key));
+let hasStoredProfile = Boolean(hasValidStoredProfile && !isSeededDemo);
 
 function writeJSON(key, value) {
   localStorage.setItem(key, JSON.stringify(value));
@@ -76,6 +79,8 @@ if (plan) {
   if (targetKey && !planText.toLowerCase().includes(targetKey.toLowerCase())) plan = null;
 }
 let completedTasks = new Set(readJSON(STORAGE.tasks, []));
+let taskEvents = readJSON(STORAGE.taskEvents, {});
+let verifiedTasks = new Set(readJSON(STORAGE.taskProofs, []));
 let activeTask = '';
 let selectedEvidenceFile = null;
 let evidenceFileRequest = null;
@@ -116,7 +121,9 @@ function makeLocalPlan(sourceProfile = profile, reason = '') {
         : index === 1
           ? ['选一个与目标岗位最相关的真实问题', '完成方案、过程、结果和取舍记录', '整理为一页案例并获得一次外部反馈']
           : ['准备背景、目标、行动、结果四段表达', '录制一次 15 分钟模拟面试', '复听并修改三个最模糊的回答'],
-      doneWhen: ['形成一张岗位能力对照表', '形成一份可展示、可复述的案例', '能在 3 分钟内讲清项目并回答追问'][index]
+      doneWhen: ['形成一张岗位能力对照表', '形成一份可展示、可复述的案例', '能在 3 分钟内讲清项目并回答追问'][index],
+      effort: [2, 4, 3][index],
+      estimatedDays: [2, 7, 3][index]
     })),
     stages: [
       { title: '确认入口与补齐基础证据', why: '先找到现阶段够得着的入口，并集中补最影响筛选的一项能力。', tasks: actions, doneWhen: '完成三个近期行动并获得一次真实反馈' },
@@ -319,17 +326,20 @@ function renderProfile(currentPlan = plan) {
 }
 
 function renderDecision(currentPlan) {
-  const next = $('.task-toggle:not(.done)') || $('.task-toggle');
+  const next = $('.task-toggle:not(.verified)');
+  const awaitingProof = next && completedTasks.has(next.dataset.task) && !verifiedTasks.has(next.dataset.task);
   const gaps = (currentPlan?.gaps || []).filter(Boolean);
   const role = pickRoles(currentPlan || makeLocalPlan())[1]?.title || profile.target || '目标岗位';
   const gap = compact(gaps[0] || '补充一条真实成果', 18);
   $('#decisionTitle').textContent = next?.dataset.task || '补充一条真实进展';
-  $('#decisionReason').textContent = next ? `这一步会直接补齐“${gap}”，完成后可以重新判断你距离 ${role} 还差什么。` : '你已经完成当前行动清单，记录新的进展后会生成下一轮优先级。';
+  $('#decisionReason').textContent = awaitingProof
+    ? '行动已经执行，补充结果、数据或链接后，AI 才能把它当作真实能力证据并更新后续路线。'
+    : next ? `这一步会直接补齐“${gap}”，完成后可以重新判断你距离 ${role} 还差什么。` : '你已经完成当前行动清单，记录新的进展后会生成下一轮优先级。';
   $('#pulseTarget').textContent = compact(role.replace(/（.*?）/g, ''), 15);
   $('#pulseGap').textContent = gap;
   $('#pulseUpdate').textContent = profile.evidence.length ? '材料已进入' : '等你记录';
-  $('#heroState').textContent = `当前规划重点：${next?.dataset.task || profile.target || '你的下一段职业方向'}`;
-  $('#decisionCta').textContent = next ? '打开这一步 →' : '记录新进展 →';
+  $('#heroState').textContent = `${awaitingProof ? '待补成果：' : '当前规划重点：'}${next?.dataset.task || profile.target || '你的下一段职业方向'}`;
+  $('#decisionCta').textContent = awaitingProof ? '补充行动成果 →' : next ? '打开这一步 →' : '记录新进展 →';
   $('#decisionCta').dataset.task = next?.dataset.task || '';
   const moodText = { steady: '今天按一个小步推进就很好。', anxious: '先只做最小的一步，不需要今天解决全部问题。', tired: '今天可以只整理材料，完成比强撑更重要。' }[profile.mood] || '';
   $('#moodNote').textContent = moodText;
@@ -406,7 +416,14 @@ function renderStages(currentPlan) {
       <div class="stage-body">
         <div class="stage-title"><h3>${escapeHtml(stage.title || `阶段 ${stageIndex + 1}`)}</h3><span>${stageIndex === 0 ? '现在 · 进行中' : '后续 · 待解锁'}</span></div>
         <p>${escapeHtml(stage.why || '')}</p>
-        <div class="stage-tasks">${tasks.map(task => `<div class="action-row"><button class="task-toggle ${completedTasks.has(task) ? 'done' : ''}" data-task="${escapeHtml(task)}" type="button">${escapeHtml(task)}</button><button class="task-guide" data-task="${escapeHtml(task)}" type="button">详细指导 →</button></div>`).join('')}</div>
+        <div class="stage-tasks">${tasks.map(task => {
+          const guide = (currentPlan.actionGuides || []).find(item => item.title === task) || {};
+          const effort = window.PathwiseModel.estimateEffort(task, stageIndex, currentPlan);
+          const estimate = Number(guide.estimatedDays) > 0 ? `约 ${Number(guide.estimatedDays)} 天` : `难度 ${effort}/5`;
+          const state = verifiedTasks.has(task) ? 'done verified' : completedTasks.has(task) ? 'done proof-pending' : '';
+          const stateLabel = completedTasks.has(task) && !verifiedTasks.has(task) ? ' · 待成果' : '';
+          return `<div class="action-row"><button class="task-toggle ${state}" data-task="${escapeHtml(task)}" type="button">${escapeHtml(task)}</button><span class="task-effort" title="AI 按实际投入估算：难度 ${effort}/5">${escapeHtml(estimate)} · ${effort} 点${stateLabel}</span><button class="task-guide" data-task="${escapeHtml(task)}" type="button">详细指导 →</button></div>`;
+        }).join('')}</div>
       </div>
     </article>`;
   }).join('');
@@ -432,10 +449,26 @@ function syncTaskUI() {
   const done = tasks.filter(task => task.classList.contains('done')).length;
   $('#doneCount').textContent = done;
   $('#pendingCount').textContent = Math.max(0, tasks.length - done);
-  const first = tasks.find(task => !task.classList.contains('done')) || tasks[0];
+  const weighted = window.PathwiseModel.getWeightedProgress(plan || makeLocalPlan(), completedTasks, verifiedTasks);
+  const progress = weighted.percent;
+  if ($('#sideProgressFill')) $('#sideProgressFill').style.width = `${progress}%`;
+  if ($('#sideProgressValue')) $('#sideProgressValue').textContent = `${progress}%`;
+  const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const weeklyDone = Object.values(taskEvents).filter(value => new Date(value).getTime() >= weekAgo).length;
+  const weeklyWeight = weighted.tasks.filter(task => {
+    const at = new Date(taskEvents[task.title] || 0).getTime();
+    return at >= weekAgo;
+  }).reduce((sum, task) => sum + task.effort * (verifiedTasks.has(task.title) ? 1 : .35), 0);
+  if ($('#weeklyProgress')) $('#weeklyProgress').textContent = weeklyDone
+    ? `本周获得 ${Number(weeklyWeight.toFixed(1))} 路径点 · 按投入估算`
+    : '按行动难度与投入估算';
+  const first = tasks.find(task => !task.classList.contains('verified'));
   $('#focusTitle').textContent = first?.dataset.task || '路径行动已完成';
-  $('#focusMeta').textContent = first ? '打开详细指导，完成后留下成果。' : '可以补充新进展，让 AI 生成下一段路径。';
+  const awaitingProof = first && completedTasks.has(first.dataset.task) && !verifiedTasks.has(first.dataset.task);
+  $('#focusMeta').textContent = awaitingProof ? '行动已执行，补一条成果才能完整计入进度。' : first ? '打开详细指导，完成后留下成果。' : '可以补充新进展，让 AI 生成下一段路径。';
   writeJSON(STORAGE.tasks, [...completedTasks]);
+  writeJSON(STORAGE.taskEvents, taskEvents);
+  writeJSON(STORAGE.taskProofs, [...verifiedTasks]);
   renderGrowth();
   renderDecision(plan || makeLocalPlan());
 }
@@ -458,21 +491,20 @@ function renderActivity() {
 
 function renderGrowth() {
   if (!$('#growthTree')) return;
-  const taskCount = $$('.task-toggle').length || 9;
+  const weighted = window.PathwiseModel.getWeightedProgress(plan || makeLocalPlan(), completedTasks, verifiedTasks);
   const done = $$('.task-toggle.done').length;
   const evidenceCount = profile.evidence.length;
-  const updateCount = profile.updates.length;
-  const score = Math.min(100, Math.round(20 + done / taskCount * 45 + Math.min(evidenceCount, 4) * 7 + Math.min(updateCount, 3) * 2));
+  const score = weighted.percent;
   $('#growthScore').textContent = score;
   const graduationRole = pickRoles(plan || makeLocalPlan())[1]?.title || profile.target;
   const nodes = [
     ['建立画像', `${profile.stage} · ${profile.major}`],
     ['留下证据', evidenceCount ? `${evidenceCount} 份材料已验证` : '上传简历或成果'],
-    ['形成能力', done ? `${done} 项行动已完成` : '完成第一个行动'],
+    ['形成能力', done ? `路径推进 ${weighted.percent}%` : '完成第一个行动'],
     ['抵达目标', graduationRole]
   ];
   $('#growthTree').innerHTML = nodes.map((node, index) => `<div class="growth-node ${index <= Math.floor(score / 26) ? 'lit' : ''}"><span class="node-dot">${index === 0 ? '✦' : index + 1}</span><strong>${escapeHtml(node[0])}</strong><small>${escapeHtml(node[1])}</small></div>`).join('');
-  $('#growthHint').textContent = done ? `已完成 ${done} 项行动。下一次真实成果会继续提高岗位判断的可信度。` : '完成第一个行动，点亮路径的下一站。';
+  $('#growthHint').textContent = done ? `已获得 ${Number(weighted.doneWeight.toFixed(1))} / ${weighted.totalWeight} 路径点。留下成果后，行动才会完整计入。` : '完成第一个行动，点亮路径的下一站。';
 }
 
 function renderAll(currentPlan) {
@@ -490,7 +522,9 @@ function persistProfile() {
   writeJSON(STORAGE.profile, profile);
   hasStoredProfile = true;
   document.body.classList.remove('is-onboarding');
-  renderProfile(plan);
+  // Profile edits must appear immediately while a new AI plan is still running;
+  // never leak a stale or blank plan summary into the loading state.
+  renderProfile(null);
   renderActivity();
 }
 
@@ -541,12 +575,15 @@ function openDrawer({ kicker = 'ACTION GUIDE', title, intro = '', content, actio
 
 function localGuide(action) {
   const cachedPlanGuide = (plan?.actionGuides || []).find(item => item.title === action);
+  const effort = window.PathwiseModel.estimateEffort(action, 0, plan || {});
   return {
     title: action,
     why: cachedPlanGuide?.why || `这一步会为“${profile.target}”补充一条可验证的能力证据。`,
     steps: cachedPlanGuide?.steps || ['明确最终要交付的具体结果', '拆成三个不超过 45 分钟的小步骤', '整理过程、结果和一次复盘'],
     resources: ['目标岗位 JD', '个人经历材料', '复盘模板'],
-    estimatedTime: '2-4 小时，可分两次完成',
+    estimatedTime: ({ 1: '半天内', 2: '2-4 小时，可分两次完成', 3: '约 2-4 天', 4: '约 1 周', 5: '约 3 周或更久' })[effort],
+    estimatedDays: cachedPlanGuide?.estimatedDays || null,
+    effort,
     doneWhen: cachedPlanGuide?.doneWhen || '形成一份可查看、可复述的成果',
     evidence: '完成后记录成果、数据、反馈或链接，加入证据链。',
     source: 'local'
@@ -555,8 +592,10 @@ function localGuide(action) {
 
 function guideHtml(guide) {
   const resources = (guide.resources || []).map(item => `<span>${escapeHtml(item)}</span>`).join('');
+  const effort = Math.max(1, Math.min(5, Number(guide.effort) || window.PathwiseModel.estimateEffort(guide.title || '', 0, plan || {})));
+  const effortLabel = ['', '轻量', '较轻', '中等', '较重', '里程碑'][Math.round(effort)];
   return `<div class="guide-detail"><h3>照着做</h3><ol>${(guide.steps || []).map((step, index) => `<li><b>0${index + 1}</b><span>${escapeHtml(step)}</span></li>`).join('')}</ol></div>
-    <div class="guide-meta"><div><small>预计耗时</small><strong>${escapeHtml(guide.estimatedTime || '按个人节奏完成')}</strong></div><div><small>完成标准</small><strong>${escapeHtml(guide.doneWhen || '形成可验证成果')}</strong></div></div>
+    <div class="guide-meta"><div><small>预计投入 · ${escapeHtml(effortLabel)} ${Math.round(effort)}/5</small><strong>${escapeHtml(guide.estimatedTime || (guide.estimatedDays ? `约 ${guide.estimatedDays} 天` : '按个人节奏完成'))}</strong></div><div><small>完成标准</small><strong>${escapeHtml(guide.doneWhen || '形成可验证成果')}</strong></div></div>
     ${resources ? `<div class="guide-resources"><small>准备这些</small>${resources}</div>` : ''}
     <div class="guide-evidence"><small>完成后留下什么</small><p>${escapeHtml(guide.evidence || '记录成果与复盘。')}</p></div>`;
 }
@@ -719,27 +758,29 @@ function bindEvents() {
     const expanded = $('#caseCollapsible').classList.toggle('open');
     event.currentTarget.textContent = expanded ? '收起判断依据 ↑' : '展开判断依据 ↓';
   });
-  $$('.side-link').forEach(button => button.addEventListener('click', () => {
+  $$('.side-link[data-target]').forEach(button => button.addEventListener('click', () => {
     const target = $(`#${button.dataset.target}`);
-    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (target) setWorkspaceView(button.dataset.target);
   }));
   $$('[data-target="lab"]').forEach(button => button.addEventListener('click', () => {
     location.href = 'lab.html';
   }));
 
   $('#sideFocusBtn').addEventListener('click', () => {
-    const first = $('.task-toggle:not(.done)') || $('.task-toggle');
+    const first = $('.task-toggle:not(.verified)');
     if (first) {
-      first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setWorkspaceView('route');
       setTimeout(() => openActionGuide(first.dataset.task), 350);
+    } else {
+      setWorkspaceView('evidence');
     }
   });
 
   $('#decisionCta').addEventListener('click', () => {
     const task = $('#decisionCta').dataset.task;
     if (task) return openActionGuide(task);
+    setWorkspaceView('evidence');
     $('[data-compose="update"]').click();
-    $('#evidence').scrollIntoView({ behavior: 'smooth', block: 'start' });
     setTimeout(() => $('#updateInput').focus(), 350);
   });
 
@@ -754,22 +795,22 @@ function bindEvents() {
   $$('.quick-starts [data-start]').forEach(button => button.addEventListener('click', () => {
     const mode = button.dataset.start;
     if (mode === 'route') {
-      $('#route').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setWorkspaceView('route');
       setTimeout(() => {
-        const first = $('.task-toggle:not(.done)') || $('.task-toggle');
+        const first = $('.task-toggle:not(.verified)');
         if (first) openActionGuide(first.dataset.task);
       }, 350);
       return;
     }
     if (mode === 'lab') { location.href = 'lab.html'; return; }
     if (mode === 'interview') { openActionGuide('进行一次目标岗位项目深挖模拟'); return; }
-    if (mode === 'evidence') { $('[data-compose="update"]').click(); $('#evidence').scrollIntoView({ behavior: 'smooth', block: 'start' }); setTimeout(() => $('#updateInput').focus(), 350); return; }
+    if (mode === 'evidence') { setWorkspaceView('evidence'); $('[data-compose="update"]').click(); setTimeout(() => $('#updateInput').focus(), 350); return; }
     if (mode === 'profile') {
       $('#editProfile').click();
       return;
     }
     $(`[data-compose="${mode === 'resume' ? 'material' : 'update'}"]`).click();
-    $('#evidence').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setWorkspaceView('evidence');
     if (mode === 'resume') {
       setTimeout(() => $('#evidenceFile').click(), 450);
     } else {
@@ -801,12 +842,17 @@ function bindEvents() {
     const name = task.dataset.task;
     if (completedTasks.has(name)) {
       completedTasks.delete(name);
-      task.classList.remove('done');
+      verifiedTasks.delete(name);
+      delete taskEvents[name];
+      task.classList.remove('done', 'verified', 'proof-pending');
       showToast('已恢复为待完成');
     } else {
       completedTasks.add(name);
-      task.classList.add('done');
-      showToast('行动已完成，继续留下成果');
+      taskEvents[name] = new Date().toISOString();
+      task.classList.add('done', 'proof-pending');
+      task.closest('.action-row')?.classList.add('just-completed');
+      showToast(`行动已执行 · 先获得部分进度，留下成果后完整计入`);
+      companionSay('这一步已经记入路径。补充成果后，AI 还会重新判断后续路线。');
       setTimeout(() => openOutcome(name), 150);
     }
     syncTaskUI();
@@ -866,9 +912,9 @@ function bindEvents() {
   $('.profile-edit-inline').addEventListener('click', openProfile);
   $('#modalResumeBtn')?.addEventListener('click', () => {
     closeModal($('#profileModal'));
+    setWorkspaceView('evidence');
     const materialTab = $('[data-compose="material"]');
     materialTab.click();
-    $('#evidence').scrollIntoView({ behavior: 'smooth', block: 'start' });
     setTimeout(() => $('#evidenceFile').click(), 450);
   });
   $('#profileForm').addEventListener('submit', async event => {
@@ -893,13 +939,20 @@ function bindEvents() {
     if (!text) return;
     closeModal($('#outcomeModal'));
     closeModal($('#drawer'));
+    verifiedTasks.add(activeTask);
+    $$('.task-toggle').filter(task => task.dataset.task === activeTask).forEach(task => {
+      task.classList.remove('proof-pending');
+      task.classList.add('done', 'verified');
+    });
+    syncTaskUI();
     await addEvidence(`${activeTask}：${text}${link ? `（成果链接：${link}）` : ''}`, { type: '行动成果' });
   });
 
   $('#drawerDone').addEventListener('click', () => {
     if (!activeTask) return closeModal($('#drawer'));
     completedTasks.add(activeTask);
-    $$('.task-toggle').filter(task => task.dataset.task === activeTask).forEach(task => task.classList.add('done'));
+    taskEvents[activeTask] = taskEvents[activeTask] || new Date().toISOString();
+    $$('.task-toggle').filter(task => task.dataset.task === activeTask).forEach(task => task.classList.add('done', 'proof-pending'));
     syncTaskUI();
     closeModal($('#drawer'));
     openOutcome(activeTask);
@@ -937,12 +990,15 @@ function bindEvents() {
     $$('.open').forEach(element => closeModal(element));
   });
 
-  const observer = new IntersectionObserver(entries => {
-    const visible = entries.filter(entry => entry.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-    if (!visible) return;
-    $$('.side-link').forEach(button => button.classList.toggle('active', button.dataset.target === visible.target.id));
-  }, { rootMargin: '-20% 0px -65% 0px', threshold: [0, .2, .6] });
-  $$('#overview, #roles, #route, #cases, #evidence, #growth').forEach(section => observer.observe(section));
+}
+
+function setWorkspaceView(view = 'overview') {
+  const allowed = ['overview', 'route', 'evidence'];
+  const next = !hasStoredProfile ? 'overview' : (allowed.includes(view) ? view : 'overview');
+  allowed.forEach(name => document.body.classList.toggle(`workspace-view-${name}`, name === next));
+  $$('.side-link[data-target]').forEach(button => button.classList.toggle('active', button.dataset.target === next));
+  history.replaceState(null, '', next === 'overview' ? location.pathname : `#${next}`);
+  window.scrollTo({ top:0, behavior:'smooth' });
 }
 
 function init() {
@@ -957,6 +1013,7 @@ function init() {
   updateClock();
   setInterval(updateClock, 30000);
   bindEvents();
+  setWorkspaceView(location.hash === '#route' ? 'route' : location.hash === '#evidence' ? 'evidence' : 'overview');
   if (hasStoredProfile) persistProfile();
   renderAll(plan || makeLocalPlan());
   checkHealth();
