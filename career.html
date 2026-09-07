@@ -14,15 +14,15 @@
   <main class="app-shell">
     <aside class="side">
       <a class="logo" href="index.html" aria-label="Pathwise 首页"><b>P</b><span>pathwise</span><small>career companion</small></a>
-      <div class="side-label">MY PATH</div>
+      <div class="side-label">CAREER JOURNEY</div>
       <nav class="side-nav" aria-label="主导航">
-        <button class="side-link active" data-target="overview"><span class="nav-icon">⌂</span>路径总览</button>
-        <a class="side-link side-anchor" href="lab.html"><span class="nav-icon">✦</span>方向比较</a>
-        <button class="side-link" data-target="roles"><span class="nav-icon">⌁</span>岗位地图</button>
-        <button class="side-link" data-target="route"><span class="nav-icon">✓</span>行动路径<span class="nav-count" id="pendingCount">3</span></button>
-        <button class="side-link" data-target="evidence"><span class="nav-icon">＋</span>进展证据</button>
+        <button class="side-link active" data-target="overview"><span class="nav-icon">⌂</span>今日规划</button>
         <a class="side-link side-anchor" href="map.html"><span class="nav-icon">⌖</span>进步地图</a>
+        <button class="side-link" data-target="route"><span class="nav-icon">✓</span>行动计划<span class="nav-count" id="pendingCount">3</span></button>
+        <button class="side-link" data-target="evidence"><span class="nav-icon">＋</span>进展记录</button>
       </nav>
+      <div class="side-label side-tools-label">CAREER TOOLS</div>
+      <a class="side-link side-anchor" href="lab.html"><span class="nav-icon">⇄</span>比较职业方向</a>
       <div class="side-focus"><span class="kicker">NEXT STEP</span><strong id="focusTitle">完成第一个规划行动</strong><p id="focusMeta">每一步都会让下一次规划更贴近你。</p><button id="sideFocusBtn" type="button">打开行动 <span>→</span></button></div>
       <button class="reset-path" type="button"><span>↻</span> 重置我的路径</button>
       <div class="user"><div class="avatar" id="avatarText">P</div><div><strong>我的职业路径</strong><small id="userMeta">进展自动保存</small></div><span class="save-dot" title="数据已保存"></span></div>
@@ -35,6 +35,8 @@
           <div class="product-label">PATHWISE · AI CAREER OS</div>
           <h1>你的职业规划，<br><em>从今天开始变具体。</em></h1>
           <p>小径记住你的真实经历，把目标拆成现在、毕业和更长远的每一步，并在你有新进展时持续更新。</p>
+          <form class="ai-command" id="aiCommandForm"><span>✦</span><input id="aiCommandInput" autocomplete="off" placeholder="告诉小径最近发生了什么…"><button type="submit">交给 AI ↗</button></form>
+          <div class="ai-command-examples"><span>试试：</span><button type="button">我刚完成一次面试</button><button type="button">我做完了一个项目</button><button type="button">我想换目标岗位</button></div>
           <div class="hero-state"><span class="state-pulse"></span><div><small>今天先做这一件事</small><strong id="heroState">你的下一段经历，应该补哪块能力？</strong></div><button type="button" data-start="route">打开行动 →</button></div>
           <div class="quick-starts" aria-label="规划入口"><button type="button" data-start="route"><b>01</b><span>查看今日规划</span><i>→</i></button><button type="button" data-start="lab"><b>02</b><span>比较未来方向</span><i>→</i></button><button type="button" data-start="evidence"><b>03</b><span>更新最新进展</span><i>→</i></button></div>
           <div class="top-actions"><button class="primary" id="editProfile" type="button">更新基本信息 <span>↗</span></button><button class="icon-button" id="themeToggle" type="button" aria-label="切换深色模式" title="切换深色模式">◐</button></div>
@@ -48,7 +50,7 @@
         <div class="top-meta"><span><i></i> 进展自动保存</span><b id="clock">--:--</b></div>
       </header>
 
-      <section class="orientation-strip" aria-label="产品使用方式">
+      <section class="orientation-strip product-guide" aria-label="产品使用方式">
         <div class="orientation-intro"><span class="kicker">YOUR CAREER PLAN</span><strong>一条主线，从画像走到成长。</strong><small>打开后，先完成“今日规划”里的第一步。</small></div>
         <div class="orientation-step"><b>01</b><span>先认识现在的你</span><small>阶段 · 专业 · 目标</small></div>
         <div class="orientation-line"></div>
@@ -83,9 +85,9 @@
         <div class="steps" id="stageList"></div>
       </section>
 
-      <section class="case-section page-section" id="cases" aria-labelledby="caseTitle">
-        <div class="section-head"><div><span class="kicker">REFERENCE SIGNALS</span><h2 id="caseTitle">这次判断参考了什么？</h2><p>案例只用于比较，不会替代你的真实经历。</p></div><span class="case-count" id="caseCount">等待规划</span></div>
-        <div class="case-list" id="caseList"><div class="case-empty">完成一次规划后，这里会显示与你最相关的公开岗位和求职案例。</div></div>
+      <section class="case-section page-section secondary-section" id="cases" aria-labelledby="caseTitle">
+        <div class="section-head"><div><span class="kicker">REFERENCE SIGNALS</span><h2 id="caseTitle">AI 为什么这样判断？</h2><p>需要时再展开查看公开案例与岗位依据，不打断你的行动主线。</p></div><button class="text-button" id="toggleCases" type="button">展开判断依据 ↓</button></div>
+        <div class="case-collapsible" id="caseCollapsible"><div class="case-summary"><span>本次参考</span><strong id="caseCount">等待规划</strong><small>案例只用于校准，不会替代你的真实经历。</small></div><div class="case-list" id="caseList"><div class="case-empty">完成一次规划后，这里会显示与你最相关的公开岗位和求职案例。</div></div></div>
       </section>
 
       <section class="evidence-workspace page-section" id="evidence">

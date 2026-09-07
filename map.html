@@ -1,47 +1,5 @@
-<!doctype html>
-<html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#102f31">
-  <title>进步地图 · Pathwise</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@500;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="redesign.css">
-</head>
-<body class="map-page">
-  <header class="map-topbar"><a class="logo" href="index.html"><b>P</b><span>pathwise</span><small>career companion</small></a><a class="map-back" href="career.html">← 返回职业规划</a></header>
-  <main class="map-shell">
-    <section class="map-intro">
-      <span class="kicker">YOUR LIVING PATH</span>
-      <h1>你的进步，<br><em>正在地图上发生。</em></h1>
-      <p>这里不是一张静态路线图。每次新经历都会让 AI 重绘道路；每项真实成果，都会把你向目标推进一站。</p>
-      <div class="map-legend"><span><i class="done"></i>已走过</span><span><i class="now"></i>当前位置</span><span><i></i>等待抵达</span></div>
-    </section>
-    <section class="career-map" aria-label="职业进步地图">
-      <svg class="map-terrain" viewBox="0 0 1200 720" role="img" aria-label="从职业画像出发，经过行动与证据站点，抵达毕业目标的路线">
-        <defs>
-          <linearGradient id="mapLand" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#eef5e9"/><stop offset="1" stop-color="#dcebdd"/></linearGradient>
-          <filter id="softShadow"><feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#1d5544" flood-opacity=".16"/></filter>
-        </defs>
-        <rect width="1200" height="720" rx="28" fill="url(#mapLand)"/>
-        <g class="contours" fill="none" stroke="#9ebda7" stroke-width="2" opacity=".34">
-          <path d="M-40 160C180 20 300 210 520 92S870 30 1240 150"/><path d="M-50 205C190 65 310 255 535 138S890 78 1250 195"/><path d="M-50 620C180 480 330 675 555 555S900 475 1250 610"/><path d="M-30 665C200 530 350 720 575 600S920 520 1240 660"/>
-        </g>
-        <g class="map-water" fill="none" stroke="#a5cfcc" stroke-width="22" opacity=".45"><path d="M1040 -20C950 130 1120 250 1015 390S960 610 1100 750"/></g>
-        <g class="map-forest" fill="#6f9b79" opacity=".32"><circle cx="155" cy="160" r="17"/><circle cx="185" cy="180" r="13"/><circle cx="1000" cy="155" r="16"/><circle cx="1030" cy="180" r="12"/><circle cx="190" cy="610" r="16"/><circle cx="225" cy="592" r="12"/></g>
-        <path class="route-shadow" d="M100 570 C180 650 270 590 300 485 S420 330 515 405 S650 520 720 400 S825 190 920 245 S1020 360 1100 155"/>
-        <path id="routeBase" class="route-base" d="M100 570 C180 650 270 590 300 485 S420 330 515 405 S650 520 720 400 S825 190 920 245 S1020 360 1100 155"/>
-        <path id="routeDone" class="route-done" d="M100 570 C180 650 270 590 300 485 S420 330 515 405 S650 520 720 400 S825 190 920 245 S1020 360 1100 155"/>
-        <g id="mapNodes"></g>
-        <g id="traveler" class="traveler" filter="url(#softShadow)"><circle r="21"/><text y="5" text-anchor="middle">·ᴗ·</text><path d="M-7 27L0 36 7 27"/></g>
-      </svg>
-      <div class="map-compass"><span>N</span><i></i></div>
-      <div class="map-stage-label stage-one">起步原野</div><div class="map-stage-label stage-two">能力山谷</div><div class="map-stage-label stage-three">目标高地</div>
-    </section>
-    <aside class="map-detail" id="mapDetail" aria-live="polite"><button id="mapDetailClose" type="button" aria-label="收起站点详情">×</button><span class="kicker" id="mapDetailKicker">CURRENT STOP</span><h2 id="mapDetailTitle">正在读取你的路径</h2><p id="mapDetailWhy">职业规划生成后，行动会自动铺成一条可行走的路线。</p><div id="mapDetailBody"></div><a id="mapDetailAction" href="career.html#route">回到规划完成这一步 →</a></aside>
-  </main>
-  <script src="map.js"></script>
-</body>
-</html>
+<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#f2f1ed"><title>职业进步地图 · Pathwise</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="redesign.css"></head>
+<body class="route-map-page"><header class="route-map-header"><a class="route-brand" href="index.html"><b>P</b><span>PATHWISE</span></a><nav><a href="career.html">规划</a><strong>进步地图</strong><a href="career.html#evidence">进展</a></nav><a class="route-map-back" href="career.html">返回工作台 ↗</a></header>
+<main class="route-map-shell"><aside class="route-context"><span class="map-eyebrow">AI CAREER ROUTE / LIVE</span><h1>从现在，走到<br><em id="mapDestination">毕业目标</em></h1><p>每一站都来自当前职业规划。加入新经历后，AI 会重新判断终点、改道，并解释为什么。</p><div class="route-current"><small>YOU ARE HERE</small><strong id="currentStop">正在读取路径</strong><span id="currentReason">—</span></div><div class="route-next"><small>NEXT MOVE</small><strong id="nextStop">建立第一份画像</strong><a href="career.html#route">去完成 →</a></div><div class="route-progress"><div><span>路径进度</span><b id="routePercent">0%</b></div><i><em id="routeProgressFill"></em></i><small id="routeProgressMeta">0 / 0 个行动完成</small></div><div class="route-key"><span><i class="key-done"></i>已经走过</span><span><i class="key-current"></i>当前行动</span><span><i class="key-future"></i>未来站点</span><span><i class="key-branch"></i>备选方向</span></div><div class="reroute-note" id="rerouteNote" hidden><small>LAST AI REROUTE</small><strong id="rerouteTitle"></strong><span id="rerouteReason"></span></div></aside>
+<section class="route-canvas-wrap"><div class="route-canvas-head"><div><span>CAREER TRANSIT MAP</span><small id="mapUpdated">规划尚未生成</small></div><button id="centerCurrent" type="button">定位当前位置 ◎</button></div><div class="route-canvas" id="routeCanvas"><svg id="careerRouteSvg" viewBox="0 0 980 670" role="img" aria-label="职业规划路线图"><defs><filter id="routeGlow"><feGaussianBlur stdDeviation="5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><g class="route-grid"><path d="M0 110H980M0 220H980M0 330H980M0 440H980M0 550H980M155 0V670M310 0V670M465 0V670M620 0V670M775 0V670M930 0V670"/></g><g id="routeLines"></g><g id="routeStations"></g></svg><div class="route-zone zone-now">NOW<br><span>现实入口</span></div><div class="route-zone zone-build">BUILD<br><span>能力积累</span></div><div class="route-zone zone-goal">GRADUATION<br><span>毕业落点</span></div></div></section>
+<aside class="station-panel" id="stationPanel"><div class="station-panel-top"><span id="stationType">CURRENT STATION</span><button id="closeStation" type="button">×</button></div><h2 id="stationTitle">选择一个站点</h2><p id="stationWhy">点击路线上的站点，查看 AI 为什么把它放在这里。</p><div class="station-section"><small>怎么抵达</small><ol id="stationSteps"></ol></div><div class="station-proof"><small>通关凭证</small><strong id="stationDone">留下一个可验证成果</strong></div><a id="stationAction" href="career.html#route">回到行动计划 →</a></aside></main><script src="map.js"></script></body></html>

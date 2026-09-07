@@ -6,6 +6,7 @@ const STORAGE = {
   plan: 'pathwisePlan',
   tasks: 'pathwiseTasks',
   guides: 'pathwiseActionGuides',
+  history: 'pathwisePlanHistory',
   theme: 'pathwiseTheme'
 };
 const DEFAULT_PROFILE = {
@@ -356,6 +357,20 @@ function renderPlanDelta(previousPlan, nextPlan, sourceLabel = '新信息') {
   box.hidden = false;
 }
 
+function recordPlanVersion(previousPlan, nextPlan, sourceLabel, mode = 'ai') {
+  if (!nextPlan) return;
+  const previousRole = pickRoles(previousPlan || {}).find(Boolean)?.title || '';
+  const nextRole = pickRoles(nextPlan).find(Boolean)?.title || profile.target || '';
+  const previousGap = previousPlan?.gaps?.[0] || '';
+  const nextGap = nextPlan.gaps?.[0] || '';
+  const previousAction = previousPlan?.actions?.[0] || '';
+  const nextAction = nextPlan.actions?.[0] || '';
+  if (previousPlan && previousRole === nextRole && previousGap === nextGap && previousAction === nextAction) return;
+  const history = readJSON(STORAGE.history, []);
+  history.push({ at:new Date().toISOString(), source:sourceLabel, mode, role:nextRole, previousRole, gap:nextGap, previousGap, action:nextAction, previousAction });
+  writeJSON(STORAGE.history, history.slice(-20));
+}
+
 function pickRoles(currentPlan) {
   const currentRoles = Array.isArray(currentPlan.currentRoles) ? currentPlan.currentRoles : [];
   const graduationRoles = Array.isArray(currentPlan.graduationRoles) ? currentPlan.graduationRoles : [];
@@ -486,6 +501,7 @@ async function recalculate(successMessage = '路径已经根据新信息更新�
     const result = await requestStreamingPlan(profile);
     if (!result.currentRoles || !result.stages) throw new Error('模型返回缺少规划字段');
     plan = { ...result, source: result.source || 'ai' };
+    recordPlanVersion(previousPlan, plan, '这次更新', plan.source);
     writeJSON(STORAGE.plan, plan);
     renderAll(plan);
     renderPlanDelta(previousPlan, plan, '这次更新');
@@ -497,6 +513,7 @@ async function recalculate(successMessage = '路径已经根据新信息更新�
   } catch (error) {
     const reason = error.name === 'AbortError' ? '模型响应超时' : error.message;
     plan = makeLocalPlan(profile, reason);
+    recordPlanVersion(previousPlan, plan, '这次更新', 'local');
     writeJSON(STORAGE.plan, plan);
     renderAll(plan);
     renderPlanDelta(previousPlan, plan, '这次更新');
@@ -686,6 +703,22 @@ async function checkHealth() {
 }
 
 function bindEvents() {
+  $('#aiCommandForm')?.addEventListener('submit', async event => {
+    event.preventDefault();
+    const input = $('#aiCommandInput');
+    const note = input.value.trim();
+    if (!note) return showToast('告诉小径一件最近发生的事');
+    input.value = '';
+    await addUpdate(note);
+  });
+  $$('.ai-command-examples button').forEach(button => button.addEventListener('click', () => {
+    $('#aiCommandInput').value = button.textContent.trim();
+    $('#aiCommandInput').focus();
+  }));
+  $('#toggleCases')?.addEventListener('click', event => {
+    const expanded = $('#caseCollapsible').classList.toggle('open');
+    event.currentTarget.textContent = expanded ? '收起判断依据 ↑' : '展开判断依据 ↓';
+  });
   $$('.side-link').forEach(button => button.addEventListener('click', () => {
     const target = $(`#${button.dataset.target}`);
     if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
