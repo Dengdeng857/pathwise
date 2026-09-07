@@ -108,9 +108,16 @@ export async function chat(env, messages, maxTokens = 1800, options = {}) {
 
 export function parseModelJson(content) {
   const cleaned = String(content).replace(/^```(?:json)?\s*|\s*```$/g, '').trim();
-  try { return JSON.parse(cleaned); } catch (_) {
-    const start = cleaned.search(/[\[{]/);
-    if (start < 0) throw new Error('模型返回不是 JSON');
+  const parseCandidate = candidate => {
+    const parsed = JSON.parse(candidate);
+    return typeof parsed === 'string' ? JSON.parse(parsed) : parsed;
+  };
+  try { return parseCandidate(cleaned); } catch (_) {
+    if (!/[\[{]/.test(cleaned)) throw new Error('模型返回不是 JSON');
+    // Try every opening token. Some compatible gateways have emitted a lone
+    // leading "{" frame before repeating the complete JSON object.
+    for (let start = 0; start < cleaned.length; start += 1) {
+      if (cleaned[start] !== '{' && cleaned[start] !== '[') continue;
     const opening = cleaned[start];
     const closing = opening === '[' ? ']' : '}';
     let depth = 0; let quoted = false; let escaped = false;
@@ -120,7 +127,11 @@ export function parseModelJson(content) {
       if (char === '"') { quoted = true; continue; }
       if (char === opening) depth += 1;
       else if (char === closing) depth -= 1;
-      if (depth === 0) return JSON.parse(cleaned.slice(start, index + 1));
+        if (depth === 0) {
+          try { return parseCandidate(cleaned.slice(start, index + 1)); }
+          catch (_) { break; }
+        }
+      }
     }
     throw new Error('模型返回 JSON 不完整');
   }
@@ -131,6 +142,36 @@ export function hasModelPlaceholder(value) {
   if (Array.isArray(value)) return value.some(hasModelPlaceholder);
   if (value && typeof value === 'object') return Object.values(value).some(hasModelPlaceholder);
   return false;
+}
+
+export function validatePlan(value) {
+  const required = ['profile', 'summary', 'currentRoles', 'graduationRoles', 'gaps', 'actions', 'actionGuides', 'stages'];
+  if (!value || typeof value !== 'object' || required.some(key => !(key in value))) throw new Error('模型规划字段不完整');
+  const core = Object.fromEntries(required.map(key => [key, value[key]]));
+  if (hasModelPlaceholder(core)) throw new Error('模型返回了 JSON 示例占位符');
+  if (typeof value.profile !== 'string' || !value.profile.trim() || typeof value.summary !== 'string' || !value.summary.trim()) throw new Error('模型画像或总结为空');
+  if (required.slice(2).some(key => !Array.isArray(value[key]) || !value[key].length)) throw new Error('模型规划列表为空');
+  if (value.actions.some(item => typeof item !== 'string' || item.trim().length < 4)) throw new Error('模型行动项无效');
+  if ([...value.currentRoles, ...value.graduationRoles].some(item => !item || typeof item.title !== 'string' || !item.title.trim() || item.match === null || item.match === '' || !Number.isFinite(Number(item.match)))) throw new Error('模型岗位判断无效');
+  if (value.gaps.some(item => typeof item !== 'string' || item.trim().length < 2)) throw new Error('模型差距内容无效');
+  if (value.actionGuides.some(item => !item || typeof item.title !== 'string' || item.title.trim().length < 4 || !Array.isArray(item.steps) || !item.steps.length)) throw new Error('模型行动指导无效');
+  const guideTitles = new Set(value.actionGuides.map(item => item.title.trim()));
+  if (value.actions.some(item => !guideTitles.has(item.trim()))) throw new Error('行动项与行动指导未对齐');
+  if (value.stages.some(item => !item || typeof item.title !== 'string' || !item.title.trim() || !Array.isArray(item.tasks) || !item.tasks.length || item.tasks.some(task => typeof task !== 'string' || !task.trim()))) throw new Error('模型阶段结构无效');
+  return value;
+}
+
+export function normalizeDirectionRecommendation(value) {
+  if (!value || typeof value !== 'object') return { target: '', basis: '', confidence: 0 };
+  const target = String(value.target || '').trim().slice(0, 120);
+  const basis = String(value.basis || '').trim().slice(0, 240);
+  const rawConfidence = Number(value.confidence);
+  if (!target || hasModelPlaceholder(target) || hasModelPlaceholder(basis)) return { target: '', basis: '', confidence: 0 };
+  return {
+    target,
+    basis,
+    confidence: Number.isFinite(rawConfidence) ? Math.max(0, Math.min(100, Math.round(rawConfidence))) : 0
+  };
 }
 
 export function compactProfile(profile = {}) {

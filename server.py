@@ -251,11 +251,17 @@ def local_profile_extract(content, current=None):
     for sentence in re.split(r'[。；;.!！？]',text):
         sentence=sentence.strip()
         if sentence and re.search(r'实习|项目|技能|负责|开发|研究|Python|Java|Go|安全|AI|竞赛',sentence,re.I): signals.append(sentence)
+    recommended=''
+    if re.search(r'产品|需求|用户|运营|策略',text): recommended='产品经理'
+    elif re.search(r'安全|漏洞|攻防|风控',text): recommended='软件安全工程师'
+    elif re.search(r'模型|算法|机器学习|AI',text,re.I): recommended='AI 应用工程师'
+    elif re.search(r'开发|Python|Java|Go|C\+\+',text,re.I): recommended='软件开发工程师'
     return {
         'stage': stage_match.group(1).replace(' ','') if stage_match else '',
         'school': school_match.group(1) if school_match else '',
         'major': major_match.group(1).strip(' ，,。') if major_match else '',
         'experience': ('；'.join(signals[:4]) or text[:900])[:900],
+        'recommendation':{'target':recommended,'basis':'根据简历中反复出现的经历与技能关键词推测，仅供确认','confidence':58 if recommended else 0},
         'source':'local'
     }
 
@@ -275,6 +281,24 @@ def local_evidence_insight(content, profile=None):
         'resumeLine':'参与相关项目并负责部分方案、实现或复盘工作（待补充量化结果）。',
         'source':'local'
     }
+
+def local_trajectory_update(payload):
+    previous=payload.get('previousPlan') or {}; current=payload.get('nextPlan') or {}
+    evidence=payload.get('evidence') or {}
+    old_roles={str(item.get('title','')):int(item.get('match') or 0) for item in previous.get('graduationRoles',[]) if isinstance(item,dict)}
+    new_roles={str(item.get('title','')):int(item.get('match') or 0) for item in current.get('graduationRoles',[]) if isinstance(item,dict)}
+    role_changes=[]
+    for title,match in new_roles.items():
+        if title not in old_roles: role_changes.append({'type':'role-added','title':title,'match':match})
+        elif abs(match-old_roles[title])>=3: role_changes.append({'type':'match-changed','title':title,'from':old_roles[title],'to':match,'delta':match-old_roles[title]})
+    old_gaps=set(previous.get('gaps') or []); new_gaps=set(current.get('gaps') or [])
+    old_actions=set(previous.get('actions') or []); new_actions=set(current.get('actions') or [])
+    changed=bool(role_changes or old_gaps!=new_gaps or old_actions!=new_actions)
+    headline='下一步的优先级已调整' if changed else '路线暂时不需要改变'
+    why=('这份新材料改变了岗位、差距或行动判断。' if changed else '材料已进入证据链，但暂不足以改变当前路线。')
+    next_move=next(iter(new_actions-old_actions), next(iter(current.get('actions') or []), '继续补充可验证成果'))
+    delta={'version':1,'kind':'priority-shift' if changed else 'no-material-change','impactScore':min(100,len(role_changes)*16+len(old_gaps^new_gaps)*7+len(old_actions^new_actions)*7),'evidence':{'type':str(evidence.get('type',''))[:80],'label':str(evidence.get('filename') or evidence.get('title') or '')[:120]},'roleChanges':role_changes[:8],'gaps':{'added':list(new_gaps-old_gaps)[:5],'resolved':list(old_gaps-new_gaps)[:5]},'actions':{'added':list(new_actions-old_actions)[:5],'deprioritized':list(old_actions-new_actions)[:5]},'changed':changed}
+    return {'delta':delta,'narrative':{'headline':headline,'why':why,'nextMove':next_move,'confidence':70},'source':'rules'}
 
 def analyze_image(filename, content, content_type):
     """Use a configured vision-capable domestic gateway, otherwise keep a truthful local status."""
@@ -335,6 +359,17 @@ def transcribe_audio(filename, content, content_type):
     except Exception as error: return f'音频已上传，但转写失败：{error}'
 
 class Handler(SimpleHTTPRequestHandler):
+    def send_json(self, payload, status=200):
+        body=json.dumps(payload,ensure_ascii=False).encode('utf-8')
+        self.send_response(status); self.send_header('Content-Type','application/json; charset=utf-8'); self.send_header('Content-Length',str(len(body))); self.end_headers(); self.wfile.write(body)
+
+    def read_json(self, max_bytes=2_000_000):
+        try: length=int(self.headers.get('Content-Length',0))
+        except (TypeError,ValueError): raise ValueError('invalid Content-Length')
+        if length < 0 or length > max_bytes: raise ValueError('request body too large')
+        try: return json.loads(self.rfile.read(length) or '{}')
+        except (ValueError,UnicodeDecodeError): raise ValueError('invalid JSON body')
+
     def end_headers(self):
         self.send_header('Access-Control-Allow-Origin','*')
         self.send_header('Access-Control-Allow-Headers','Content-Type, Authorization')
@@ -357,14 +392,18 @@ class Handler(SimpleHTTPRequestHandler):
             fileitem=form['file'] if 'file' in form else None
             if fileitem is None or not getattr(fileitem,'filename',None): self.send_error(400,'missing file'); return
             raw=fileitem.file.read(); text=extract_document(fileitem.filename,raw,fileitem.type or 'application/octet-stream'); out={'filename':fileitem.filename,'type':fileitem.type,'text':text[:30000],'bytes':len(raw)}; body=json.dumps(out,ensure_ascii=False).encode(); self.send_response(200); self.send_header('Content-Type','application/json'); self.send_header('Content-Length',str(len(body))); self.end_headers(); self.wfile.write(body); return
-        if self.path in ('/api/profile-extract','/api/evidence-insight'):
-            n=int(self.headers.get('Content-Length',0)); payload=json.loads(self.rfile.read(n) or '{}')
-            result = local_profile_extract(payload.get('content',''), payload.get('profile')) if self.path.endswith('profile-extract') else local_evidence_insight(payload.get('content',''), payload.get('profile'))
-            body=json.dumps(result,ensure_ascii=False).encode(); self.send_response(200); self.send_header('Content-Type','application/json'); self.send_header('Content-Length',str(len(body))); self.end_headers(); self.wfile.write(body); return
+        if self.path in ('/api/profile-extract','/api/evidence-insight','/api/trajectory-update'):
+            try: payload=self.read_json()
+            except ValueError as error: self.send_json({'error':str(error)},400); return
+            if self.path in ('/api/profile-extract','/api/evidence-insight') and not str(payload.get('content') or '').strip(): self.send_json({'error':'缺少材料内容'},400); return
+            result = local_profile_extract(payload.get('content',''), payload.get('profile')) if self.path.endswith('profile-extract') else (local_trajectory_update(payload) if self.path.endswith('trajectory-update') else local_evidence_insight(payload.get('content',''), payload.get('profile')))
+            self.send_json(result); return
         if self.path not in ('/api/plan','/api/action-guide'): self.send_error(404); return
-        n=int(self.headers.get('Content-Length',0)); payload=json.loads(self.rfile.read(n) or '{}')
+        try: payload=self.read_json()
+        except ValueError as error: self.send_json({'error':str(error)},400); return
+        if self.path=='/api/action-guide' and not str(payload.get('action') or '').strip(): self.send_json({'error':'缺少行动项'},400); return
         result=make_plan(payload) if self.path=='/api/plan' else make_action_guide(payload)
-        body=json.dumps(result,ensure_ascii=False).encode(); self.send_response(200); self.send_header('Content-Type','application/json'); self.send_header('Content-Length',str(len(body))); self.end_headers(); self.wfile.write(body)
+        self.send_json(result)
     def log_message(self,*args): pass
 
 def run_server():

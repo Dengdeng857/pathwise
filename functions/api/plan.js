@@ -1,19 +1,4 @@
-import { chat, compactProfile, json, parseModelJson, retrieveCases, upstreamChat } from './_shared.js';
-
-function hasPlaceholder(value) {
-  if (typeof value === 'string') return /^(string|number|object|array|boolean|null|undefined)$/i.test(value.trim()) || value.trim().toLowerCase() === 'n/a';
-  if (Array.isArray(value)) return value.some(hasPlaceholder);
-  if (value && typeof value === 'object') return Object.values(value).some(hasPlaceholder);
-  return false;
-}
-
-function validatePlan(value) {
-  const required = ['profile','summary','currentRoles','graduationRoles','gaps','actions','actionGuides','stages'];
-  if (!value || typeof value !== 'object' || required.some(key => !(key in value))) throw new Error('模型规划字段不完整');
-  if (hasPlaceholder(value)) throw new Error('模型返回了 JSON 示例占位符');
-  if (required.slice(2).some(key => !Array.isArray(value[key]) || !value[key].length)) throw new Error('模型规划列表为空');
-  return value;
-}
+import { chat, compactProfile, json, parseModelJson, retrieveCases, upstreamChat, validatePlan } from './_shared.js';
 
 export async function onRequestPost({ request, env }) {
   try {

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#102f2c">
+  <title>成长报告 · Pathwise</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="report.css">
+  <link rel="stylesheet" href="report-states.css">
+</head>
+<body>
+  <header class="report-nav">
+    <a class="report-brand" href="index.html"><b>P</b><span>pathwise</span></a>
+    <nav><a href="career.html">职业规划</a><a href="map.html">进步地图</a><a class="active" href="report.html">成长报告</a></nav>
+    <a class="back" href="career.html">回到今天的行动 <span>→</span></a>
+  </header>
+
+  <main>
+    <section class="report-hero">
+      <div class="eyebrow">LIVING CAREER REPORT</div>
+      <h1><span>不是记录你做了多少，</span><em>而是看清你为何更接近目标。</em></h1>
+      <p>每份简历、项目成果与面试反馈，都会留下对岗位判断和行动顺序的真实影响。</p>
+      <div class="profile-line" id="profileLine">正在读取你的职业路径…</div>
+    </section>
+
+    <section class="latest-change" id="latestChange">
+      <div class="latest-index"><span>最近一次路径更新</span><b id="latestImpact">—</b><small>影响强度</small></div>
+      <div class="latest-copy"><span class="change-kind" id="latestKind">PATH UPDATE</span><h2 id="latestTitle">还没有可解释的路径变化</h2><p id="latestWhy">添加一份简历、项目成果或面试反馈后，小径会告诉你它具体改变了什么。</p><small class="latest-meta" id="latestMeta">等待第一份真实证据</small><div class="next-move"><span>因此，下一步</span><strong id="latestNext">先完成职业画像，并留下第一份真实证据。</strong></div></div>
+    </section>
+
+    <section class="signal-summary" aria-label="成长信号汇总">
+      <article><span>ROUTE</span><strong id="routeCount">0</strong><p>次路线调整</p></article>
+      <article><span>GAPS</span><strong id="resolvedCount">0</strong><p>个缺口被证据消除</p></article>
+      <article><span>FIT</span><strong id="fitCount">0</strong><p>个岗位判断被增强</p></article>
+      <article><span>EVIDENCE</span><strong id="evidenceCount">0</strong><p>份真实材料</p></article>
+    </section>
+
+    <section class="history-section">
+      <div class="section-heading"><div><span>CHANGE HISTORY · <b id="historyCount">0</b></span><h2>路径是怎样一步步改变的</h2><p>展开任意一次更新，回看当时改变的岗位、缺口与行动。</p></div><div class="history-filter" role="group" aria-label="筛选变化"><button class="active" data-filter="all">全部</button><button data-filter="route-change">改道</button><button data-filter="priority-shift">优先级</button><button data-filter="fit-update">匹配度</button></div></div>
+      <div class="history-list" id="historyList"></div>
+    </section>
+  </main>
+
+  <template id="historyTemplate">
+    <article class="history-item">
+      <button class="history-summary" type="button" aria-expanded="false"><i></i><span class="history-date"></span><div><small class="history-kind"></small><strong class="history-title"></strong><p class="history-why"></p></div><b class="history-impact"></b><span class="history-toggle">＋</span></button>
+      <div class="history-detail"><div class="change-columns"><div><span>岗位判断</span><ul class="role-changes"></ul></div><div><span>差距变化</span><ul class="gap-changes"></ul></div><div><span>行动变化</span><ul class="action-changes"></ul></div></div><div class="history-next"><span>NEXT MOVE</span><strong></strong></div></div>
+    </article>
+  </template>
+  <script src="report.js"></script>
+</body>
+</html>

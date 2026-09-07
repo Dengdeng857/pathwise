@@ -1,0 +1,39 @@
+/* State and density refinements kept separate from the base visual system. */
+.report-hero h1 span,
+.report-hero h1 em { display: block; }
+
+.latest-meta {
+  margin-top: 12px;
+  color: #8fa9a0;
+  font: 8px var(--mono);
+  letter-spacing: .35px;
+}
+
+.section-heading > div > span b { color: var(--green); font-weight: 500; }
+.history-filter[hidden] { display: none; }
+
+.empty-report .report-hero { padding-bottom: 38px; }
+.empty-report .latest-change {
+  min-height: 220px;
+  grid-template-columns: 150px 1fr;
+  box-shadow: 0 20px 45px rgba(22,54,49,.1);
+}
+.empty-report .latest-index { padding: 28px; }
+.empty-report .latest-index b { font-size: 52px; }
+.empty-report .latest-copy { padding-top: 34px; padding-bottom: 34px; }
+.empty-report .signal-summary { margin-bottom: 58px; }
+.empty-report .signal-summary article:not(:last-child) { opacity: .52; }
+.empty-report .history-section { padding-bottom: 70px; }
+.empty-report .history-empty {
+  padding: 44px 20px;
+  background: rgba(255,255,255,.2);
+}
+
+@media (max-width: 760px) {
+  .report-hero h1 span,
+  .report-hero h1 em { display: inline; }
+  .report-hero h1 span::after { content: " "; }
+  .empty-report .latest-change { grid-template-columns: 1fr; }
+  .empty-report .latest-index { min-height: 92px; }
+  .empty-report .signal-summary { margin-bottom: 50px; }
+}

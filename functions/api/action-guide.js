@@ -3,7 +3,8 @@ import { chat, compactProfile, hasModelPlaceholder, json, parseModelJson } from 
 export async function onRequestPost({ request, env }) {
   try {
     const payload = await request.json();
-    const action = String(payload.action || '').slice(0, 240);
+    const action = String(payload.action || '').trim().slice(0, 240);
+    if (!action) return json({ error: '缺少行动项' }, 400);
     const profile = compactProfile(payload.profile || {});
     const schema = '{"title":"行动名称","why":"行动价值","steps":["具体步骤"],"resources":["真实所需材料"],"estimatedTime":"预计投入","estimatedDays":3,"effort":3,"doneWhen":"完成标准","evidence":"应留下的证据"}';
     const content = await chat(env, [{

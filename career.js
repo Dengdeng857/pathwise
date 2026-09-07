@@ -7,6 +7,9 @@ const STORAGE = {
   tasks: 'pathwiseTasks',
   guides: 'pathwiseActionGuides',
   history: 'pathwisePlanHistory',
+  trajectory: 'pathwiseTrajectoryHistory',
+  events: 'pathwiseProductEvents',
+  commitments: 'pathwiseActionCommitments',
   taskEvents: 'pathwiseTaskEvents',
   taskProofs: 'pathwiseTaskProofs',
   theme: 'pathwiseTheme'
@@ -33,19 +36,36 @@ function readJSON(key, fallback) {
 // Older builds seeded this demo profile into localStorage. Treat it as empty
 // onboarding state unless the user has added real progress or evidence.
 const storedProfile = readJSON(STORAGE.profile, null);
-const isSeededDemo = storedProfile && storedProfile.stage === DEFAULT_PROFILE.stage && storedProfile.school === DEFAULT_PROFILE.school && storedProfile.major === DEFAULT_PROFILE.major && storedProfile.target === DEFAULT_PROFILE.target && storedProfile.experience === DEFAULT_PROFILE.experience && !(storedProfile.updates || []).length && !(storedProfile.evidence || []).length;
-const hasValidStoredProfile = storedProfile && ['stage', 'school', 'major', 'target'].every(key => String(storedProfile[key] || '').trim());
-if (isSeededDemo || (storedProfile && !hasValidStoredProfile)) Object.values(STORAGE).filter(key => key !== STORAGE.theme).forEach(key => localStorage.removeItem(key));
+const isSeededDemo = window.PathwiseModel.isLegacyDemoProfile(storedProfile, DEFAULT_PROFILE);
+const hasValidStoredProfile = window.PathwiseModel.isCompleteProfile(storedProfile);
+// Only remove the historical seeded demo. A partially completed profile may
+// already contain a resume or progress notes and must survive a reload.
+if (isSeededDemo) Object.values(STORAGE).filter(key => key !== STORAGE.theme).forEach(key => localStorage.removeItem(key));
 let hasStoredProfile = Boolean(hasValidStoredProfile && !isSeededDemo);
 
 function writeJSON(key, value) {
-  localStorage.setItem(key, JSON.stringify(value));
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+    return true;
+  } catch (error) {
+    // Storage failures must not break buttons or discard the in-memory plan.
+    // Log only the key and error type, never resume/evidence content.
+    console.warn('Pathwise could not persist local state', { key, name:error?.name || 'StorageError' });
+    return false;
+  }
 }
 
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, char => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   })[char]);
+}
+
+function safeExternalUrl(value) {
+  try {
+    const url = new URL(String(value || ''));
+    return ['http:', 'https:'].includes(url.protocol) ? url.href : '#';
+  } catch { return '#'; }
 }
 
 function compact(value, length = 110) {
@@ -57,6 +77,12 @@ function unique(items) {
   return [...new Set(items.filter(Boolean))];
 }
 
+function trackProductEvent(name, properties = {}) {
+  const events = readJSON(STORAGE.events, []);
+  events.push({ name, at: new Date().toISOString(), ...properties });
+  writeJSON(STORAGE.events, events.slice(-300));
+}
+
 function hasModelPlaceholder(value) {
   return window.PathwiseModel.hasModelPlaceholder(value);
 }
@@ -65,9 +91,8 @@ function validatePlanResult(result) {
   return window.PathwiseModel.validatePlanShape(result);
 }
 
-let profile = hasStoredProfile
-  ? { ...DEFAULT_PROFILE, ...readJSON(STORAGE.profile, {}) }
-  : { ...DEFAULT_PROFILE, stage: '', school: '', major: '', target: '', experience: '', updates: [], evidence: [] };
+const emptyProfile = { ...DEFAULT_PROFILE, stage: '', school: '', major: '', target: '', experience: '', updates: [], evidence: [] };
+let profile = isSeededDemo ? emptyProfile : { ...emptyProfile, ...(storedProfile || {}) };
 profile.updates = Array.isArray(profile.updates) ? profile.updates : [];
 profile.evidence = Array.isArray(profile.evidence) ? profile.evidence.map(item => typeof item === 'string' ? { type: '材料', content: item } : item).filter(Boolean) : [];
 profile.updates = unique(profile.updates.map(String).filter(update => {
@@ -106,6 +131,8 @@ if (plan) {
 let completedTasks = new Set(readJSON(STORAGE.tasks, []));
 let taskEvents = readJSON(STORAGE.taskEvents, {});
 let verifiedTasks = new Set(readJSON(STORAGE.taskProofs, []));
+let actionCommitments = readJSON(STORAGE.commitments, {});
+if (!actionCommitments || typeof actionCommitments !== 'object' || Array.isArray(actionCommitments)) actionCommitments = {};
 let activeTask = '';
 let selectedEvidenceFile = null;
 let evidenceFileRequest = null;
@@ -316,7 +343,7 @@ async function requestStreamingPlan(body) {
         if (value && (value.profile || value.currentRoles || value.stages)) return validatePlanResult(value);
       } catch (_) {}
     }
-    console.warn('Pathwise planner raw response prefix:', cleaned.slice(0, 800));
+    console.warn('Pathwise planner response could not be parsed', { length:cleaned.length, finishReason });
     throw new Error(finishReason === 'length' ? '模型输出达到长度上限，规划 JSON 未完整返回' : '流式规划返回内容无法解析');
   } finally { clearTimeout(timer); }
 }
@@ -351,21 +378,22 @@ function renderProfile(currentPlan = plan) {
 }
 
 function renderDecision(currentPlan) {
-  const next = $('.task-toggle:not(.verified)');
+  const taskButtons = $$('.task-toggle:not(.verified)');
+  const committedTask = window.PathwiseCommitmentModel.pickCommittedTask(actionCommitments, taskButtons.map(button => button.dataset.task));
+  const next = taskButtons.find(button => button.dataset.task === committedTask) || taskButtons[0];
   const awaitingProof = next && completedTasks.has(next.dataset.task) && !verifiedTasks.has(next.dataset.task);
+  const commitment = next ? actionCommitments[next.dataset.task] : null;
   const gaps = (currentPlan?.gaps || []).filter(Boolean);
   const role = pickRoles(currentPlan || makeLocalPlan())[1]?.title || profile.target || '目标岗位';
   const gap = compact(gaps[0] || '补充一条真实成果', 18);
   $('#decisionTitle').textContent = next?.dataset.task || '补充一条真实进展';
   $('#decisionReason').textContent = awaitingProof
     ? '行动已经执行，补充结果、数据或链接后，AI 才能把它当作真实能力证据并更新后续路线。'
-    : next ? `这一步会直接补齐“${gap}”，完成后可以重新判断你距离 ${role} 还差什么。` : '你已经完成当前行动清单，记录新的进展后会生成下一轮优先级。';
+    : commitment ? `${formatCommitment(commitment)}。先把这一步做完，成果会重新校准你距离 ${role} 的路径。`
+      : next ? `这一步会直接补齐“${gap}”，完成后可以重新判断你距离 ${role} 还差什么。` : '你已经完成当前行动清单，记录新的进展后会生成下一轮优先级。';
   $('#pulseTarget').textContent = compact(role.replace(/（.*?）/g, ''), 15);
   $('#pulseGap').textContent = gap;
-  $('#pulseUpdate').textContent = profile.evidence.length ? '材料已进入' : '等你记录';
-  $('#heroState').textContent = `${awaitingProof ? '待补成果：' : '当前规划重点：'}${next?.dataset.task || profile.target || '你的下一段职业方向'}`;
-  $('.hero-state button').textContent = awaitingProof ? '补充成果 →' : next ? '打开行动 →' : '记录进展 →';
-  $('#decisionCta').textContent = awaitingProof ? '补充行动成果 →' : next ? '打开这一步 →' : '记录新进展 →';
+  $('#decisionCta').textContent = awaitingProof ? '补充行动成果 →' : commitment ? '继续当前行动 →' : next ? '打开这一步 →' : '记录新进展 →';
   $('#decisionCta').dataset.task = next?.dataset.task || '';
   const moodText = { steady: '今天按一个小步推进就很好。', anxious: '先只做最小的一步，不需要今天解决全部问题。', tired: '今天可以只整理材料，完成比强撑更重要。' }[profile.mood] || '';
   $('#moodNote').textContent = moodText;
@@ -402,6 +430,56 @@ function renderPlanDelta(previousPlan, nextPlan, sourceLabel = '新信息') {
   $('#planDeltaTitle').textContent = title;
   $('#planDeltaText').textContent = text;
   box.hidden = false;
+}
+
+function summarizePlanImpact(previousPlan, nextPlan) {
+  if (!nextPlan) return '信息已保存，等待下一次路径更新';
+  const previousRole = pickRoles(previousPlan || {}).find(Boolean)?.title || '';
+  const nextRole = pickRoles(nextPlan).find(Boolean)?.title || profile.target || '';
+  const previousGap = previousPlan?.gaps?.[0] || '';
+  const nextGap = nextPlan.gaps?.[0] || '';
+  const previousAction = previousPlan?.actions?.[0] || '';
+  const nextAction = nextPlan.actions?.[0] || '';
+  if (previousRole && nextRole && previousRole !== nextRole) {
+    return `现实岗位从“${compact(previousRole, 18)}”调整为“${compact(nextRole, 18)}”`;
+  }
+  if (previousGap && nextGap && previousGap !== nextGap) {
+    return `首要缺口调整为“${compact(nextGap, 28)}”`;
+  }
+  if (previousAction && nextAction && previousAction !== nextAction) {
+    return `下一步调整为“${compact(nextAction, 30)}”`;
+  }
+  return `已增强“${compact(nextRole || profile.target || '目标岗位', 20)}”的判断依据，当前优先级保持不变`;
+}
+
+function hasMeaningfulPlanChange(previousPlan, nextPlan) {
+  if (!previousPlan || !nextPlan) return false;
+  const previousRole = pickRoles(previousPlan).find(Boolean)?.title || '';
+  const nextRole = pickRoles(nextPlan).find(Boolean)?.title || '';
+  return previousRole !== nextRole
+    || (previousPlan.gaps?.[0] || '') !== (nextPlan.gaps?.[0] || '')
+    || (previousPlan.actions?.[0] || '') !== (nextPlan.actions?.[0] || '');
+}
+
+async function explainPlanImpact(previousPlan, nextPlan, evidence) {
+  const fallback = { headline:summarizePlanImpact(previousPlan, nextPlan), why:'已根据新增证据重新比较岗位、差距与行动优先级。', nextMove:nextPlan?.actions?.[0] || '' };
+  try {
+    const result = await requestJSON('/api/trajectory-update', {
+      method:'POST', headers:{ 'Content-Type':'application/json' },
+      body:JSON.stringify({
+        profile,
+        evidence:{ ...evidence, content:compact(evidence?.content || '', 1800) },
+        previousPlan:previousPlan || {}, nextPlan:nextPlan || {}
+      })
+    }, 18000);
+    if (!result?.delta || !result?.narrative?.headline) return fallback;
+    const trajectory = readJSON(STORAGE.trajectory, []);
+    trajectory.push({ at:new Date().toISOString(), evidenceId:evidence?.addedAt || '', ...result });
+    writeJSON(STORAGE.trajectory, trajectory.slice(-20));
+    return result.narrative;
+  } catch {
+    return fallback;
+  }
 }
 
 function recordPlanVersion(previousPlan, nextPlan, sourceLabel, mode = 'ai') {
@@ -470,7 +548,10 @@ function renderStages(currentPlan) {
           const effort = window.PathwiseModel.estimateEffort(task, stageIndex, currentPlan);
           const estimate = Number(guide.estimatedDays) > 0 ? `约 ${Number(guide.estimatedDays)} 天` : `难度 ${effort}/5`;
           const state = verifiedTasks.has(task) ? 'done verified' : completedTasks.has(task) ? 'done proof-pending' : '';
-          const stateLabel = completedTasks.has(task) && !verifiedTasks.has(task) ? ' · 待成果' : '';
+          const commitment = actionCommitments[task];
+          const stateLabel = completedTasks.has(task) && !verifiedTasks.has(task)
+            ? ' · 待成果'
+            : commitment ? ` · ${formatCommitment(commitment)}` : '';
           return `<div class="action-row"><button class="task-toggle ${state}" data-task="${escapeHtml(task)}" type="button">${escapeHtml(task)}</button><span class="task-effort" title="AI 按实际投入估算：难度 ${effort}/5">${escapeHtml(estimate)} · ${effort} 点${stateLabel}</span><button class="task-guide" data-task="${escapeHtml(task)}" type="button">详细指导 →</button></div>`;
         }).join('')}</div>
       </div>
@@ -489,7 +570,7 @@ function renderCaseReferences(currentPlan) {
   $('#caseList').innerHTML = cases.slice(0, 5).map((item, index) => {
     const signals = (item.signals || []).slice(0, 4).map(signal => `<span>${escapeHtml(signal)}</span>`).join('');
     const excerpt = (item.excerpt || []).find(Boolean) || '公开案例已纳入本次判断。';
-    return `<article class="case-item"><div class="case-index">0${index + 1}</div><div class="case-body"><div class="case-meta"><span>${escapeHtml(item.type || '参考案例')}</span><b>${Math.round(Number(item.relevance || 0) * 100)}% 相关</b></div><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(compact(excerpt, 150))}</p><div class="case-signals">${signals}</div><a href="${escapeHtml(item.source_url || '#')}" target="_blank" rel="noreferrer">查看来源 ↗</a></div></article>`;
+    return `<article class="case-item"><div class="case-index">0${index + 1}</div><div class="case-body"><div class="case-meta"><span>${escapeHtml(item.type || '参考案例')}</span><b>${Math.round(Number(item.relevance || 0) * 100)}% 相关</b></div><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(compact(excerpt, 150))}</p><div class="case-signals">${signals}</div><a href="${escapeHtml(safeExternalUrl(item.source_url))}" target="_blank" rel="noopener noreferrer">查看来源 ↗</a></div></article>`;
   }).join('');
 }
 
@@ -512,13 +593,10 @@ function syncTaskUI() {
   if ($('#weeklyProgress')) $('#weeklyProgress').textContent = weeklyDone
     ? `本周获得 ${Number(weeklyWeight.toFixed(1))} 路径点 · 按投入估算`
     : '按行动难度与投入估算';
-  const first = tasks.find(task => !task.classList.contains('verified'));
-  $('#focusTitle').textContent = first?.dataset.task || '路径行动已完成';
-  const awaitingProof = first && completedTasks.has(first.dataset.task) && !verifiedTasks.has(first.dataset.task);
-  $('#focusMeta').textContent = awaitingProof ? '行动已执行，补一条成果才能完整计入进度。' : first ? '打开详细指导，完成后留下成果。' : '可以补充新进展，让 AI 生成下一段路径。';
   writeJSON(STORAGE.tasks, [...completedTasks]);
   writeJSON(STORAGE.taskEvents, taskEvents);
   writeJSON(STORAGE.taskProofs, [...verifiedTasks]);
+  writeJSON(STORAGE.commitments, actionCommitments);
   renderGrowth();
   renderDecision(plan || makeLocalPlan());
 }
@@ -530,13 +608,14 @@ function renderActivity() {
     if (text && !entries.some(item => item.text === text)) entries.push({ type: '进展', text });
   }
   for (const item of profile.evidence) {
-    const raw = String(item?.content || '').trim();
     const label = item?.filename ? `${item.type || '材料'} · ${item.filename}` : (item?.type || '材料');
-    entries.push({ type: label, text: compact(raw || '材料已保存，暂无可展示摘要。', 130), material: true });
+    const proof = Array.isArray(item?.insight?.proves) ? item.insight.proves.find(Boolean) : '';
+    const summary = item?.summary || proof || (item?.filename ? `${item.type || '材料'}已解析并进入职业画像` : compact(item?.content || '', 90));
+    entries.push({ type: label, text: compact(summary || '材料已保存，暂无可展示摘要。', 100), impact: item?.impact || '', material: true });
   }
   const visible = entries.slice(-8).reverse();
   $('#activityCount').textContent = `${entries.length} 条记录`;
-  $('#updateList').innerHTML = visible.length ? visible.map((item, index) => `<div class="update-item ${item.material ? 'material' : ''}"><span class="update-dot"></span><div><strong>${escapeHtml(item.text)}</strong><small>${escapeHtml(item.type)} · ${index === 0 ? '刚刚' : '路径记录'}</small></div></div>`).join('') : '<div class="empty-update">还没有记录。完成行动、上传简历或说一条真实进展，路径会从这里开始生长。</div>';
+  $('#updateList').innerHTML = visible.length ? visible.map((item, index) => `<div class="update-item ${item.material ? 'material' : ''}"><span class="update-dot"></span><div><strong>${escapeHtml(item.text)}</strong>${item.impact ? `<small>路径变化 · ${escapeHtml(item.impact)}</small>` : ''}<small>${escapeHtml(item.type)} · ${index === 0 ? '刚刚' : '路径记录'}</small></div></div>`).join('') : '<div class="empty-update">还没有记录。完成行动、上传简历或说一条真实进展，路径会从这里开始生长。</div>';
 }
 
 function renderGrowth() {
@@ -557,6 +636,34 @@ function renderGrowth() {
   $('#growthHint').textContent = done ? `已获得 ${Number(weighted.doneWeight.toFixed(1))} / ${weighted.totalWeight} 路径点。留下成果后，行动才会完整计入。` : '完成第一个行动，点亮路径的下一站。';
 }
 
+function buildGrowthShareText() {
+  const currentPlan = plan || makeLocalPlan();
+  const weighted = window.PathwiseModel.getWeightedProgress(currentPlan, completedTasks, verifiedTasks);
+  const verified = weighted.tasks.filter(task => verifiedTasks.has(task.title));
+  const latestImpact = [...profile.evidence].reverse().find(item => item?.impact)?.impact || '';
+  const lines = [
+    `我的 Pathwise 职业路径 · ${profile.target || '目标待确认'}`,
+    `本轮进度 ${weighted.percent}%（按行动难度与成果计算）`,
+    verified.length ? `已形成证据：${verified.slice(0, 2).map(task => task.title).join('、')}` : '正在把第一项职业行动变成可验证成果',
+    latestImpact ? `最近一次路径变化：${latestImpact}` : '',
+    '不是一次性职业测评，而是一条会被真实经历持续改写的路径。',
+    'https://pathwise-web.pages.dev'
+  ];
+  return lines.filter(Boolean).join('\n');
+}
+
+async function copyText(text) {
+  if (navigator.clipboard?.writeText) return navigator.clipboard.writeText(text);
+  const input = document.createElement('textarea');
+  input.value = text;
+  input.style.position = 'fixed';
+  input.style.opacity = '0';
+  document.body.appendChild(input);
+  input.select();
+  document.execCommand('copy');
+  input.remove();
+}
+
 function renderAll(currentPlan) {
   if (!hasStoredProfile) {
     plan = null;
@@ -566,11 +673,6 @@ function renderAll(currentPlan) {
     $('#sideProgressValue').textContent = '0%';
     $('#sideProgressFill').style.width = '0%';
     $('#weeklyProgress').textContent = '建立画像后开始计算';
-    $('#focusTitle').textContent = '先建立你的职业画像';
-    $('#focusMeta').textContent = '上传简历，或用一分钟填写当前阶段与目标。';
-    $('#sideFocusBtn').innerHTML = '开始建立 <span>→</span>';
-    $('#heroState').textContent = '先告诉小径：你现在在哪，毕业想去哪里？';
-    $('.hero-state button').textContent = '开始建立 →';
     return;
   }
   plan = currentPlan || makeLocalPlan();
@@ -584,7 +686,8 @@ function renderAll(currentPlan) {
 }
 
 function persistProfile() {
-  writeJSON(STORAGE.profile, profile);
+  profile = window.PathwiseModel.prepareProfileForStorage(profile);
+  if (!writeJSON(STORAGE.profile, profile)) showToast('浏览器存储空间不足，请先导出成长报告');
   hasStoredProfile = true;
   document.body.classList.remove('is-onboarding');
   // Profile edits must appear immediately while a new AI plan is still running;
@@ -608,6 +711,7 @@ async function recalculate(successMessage = '路径已经根据新信息更新�
     showToast('AI 已更新岗位与三阶段路径');
     companionSay(successMessage);
     setAIStatus(plan.source === 'ai' ? 'AI 已连接 · 路径实时更新' : '路径已更新 · 等待智能增强', plan.source === 'ai');
+    trackProductEvent('plan_completed', { source: plan.source, changed: hasMeaningfulPlanChange(previousPlan, plan) });
     return true;
   } catch (error) {
     const reason = error.name === 'AbortError' ? '模型响应超时' : error.message;
@@ -638,8 +742,23 @@ async function recalculate(successMessage = '路径已经根据新信息更新�
   }
 }
 
-function openModal(element) { element.classList.add('open'); }
-function closeModal(element) { element.classList.remove('open'); }
+let focusBeforeModal = null;
+function openModal(element) {
+  focusBeforeModal = document.activeElement;
+  element.inert = false;
+  element.classList.add('open');
+  element.setAttribute('aria-hidden', 'false');
+  const focusTarget = $('input:not([type="hidden"]), select, textarea, button, [href], [tabindex]:not([tabindex="-1"])', element);
+  setTimeout(() => focusTarget?.focus(), 0);
+}
+function closeModal(element) {
+  if (!element) return;
+  element.classList.remove('open');
+  element.setAttribute('aria-hidden', 'true');
+  element.inert = true;
+  if (focusBeforeModal instanceof HTMLElement && document.contains(focusBeforeModal)) focusBeforeModal.focus();
+  focusBeforeModal = null;
+}
 
 function openDrawer({ kicker = 'ACTION GUIDE', title, intro = '', content, action = '关闭指导', task = '' }) {
   activeTask = task;
@@ -679,7 +798,8 @@ function guideHtml(guide) {
 }
 
 async function openActionGuide(action) {
-  openDrawer({ title: action, intro: '正在结合你的画像与证据，把这一项拆成可以直接执行的步骤。', content: '<div class="guide-loading"><i></i><span>正在生成个人行动指导…</span></div>', action: completedTasks.has(action) ? '记录成果' : '完成并记录成果', task: action });
+  const committed = Boolean(actionCommitments[action]);
+  openDrawer({ title: action, intro: '正在结合你的画像与证据，把这一项拆成可以直接执行的步骤。', content: '<div class="guide-loading"><i></i><span>正在生成个人行动指导…</span></div>', action: completedTasks.has(action) ? '记录成果' : committed ? '我已完成，提交成果' : '设为当前行动', task: action });
   const cache = readJSON(STORAGE.guides, {});
   let guide = cache[action];
   if (!guide) {
@@ -698,6 +818,11 @@ async function openActionGuide(action) {
   $('#drawerTitle').textContent = guide.title || action;
   $('#drawerIntro').textContent = guide.why || '';
   $('#drawerContent').innerHTML = guideHtml(guide);
+  $('#drawerDone').dataset.estimatedDays = String(Math.max(1, Number(guide.estimatedDays) || ({ 1: 1, 2: 2, 3: 4, 4: 7, 5: 14 }[Math.round(Number(guide.effort) || 3)])));
+}
+
+function formatCommitment(commitment) {
+  return window.PathwiseCommitmentModel.formatCommitment(commitment);
 }
 
 function openOutcome(action) {
@@ -728,12 +853,18 @@ async function addUpdate(text) {
 async function addEvidence(content, meta = {}) {
   const text = String(content || '').trim();
   if (!text) return showToast('先粘贴内容或选择一个文件');
-  const item = { type: meta.type || $('#evidenceType').value, filename: meta.filename || '', content: text, addedAt: new Date().toISOString() };
+  const previousPlan = plan;
+  const item = { type: meta.type || $('#evidenceType').value, filename: meta.filename || '', content: text, summary: meta.summary || '', addedAt: new Date().toISOString() };
   profile.evidence.push(item);
   persistProfile();
   $('#evidenceInput').value = '';
-  await explainEvidence(item);
+  item.insight = await explainEvidence(item);
   await recalculate('材料已进入证据链，岗位与行动路径已经重新判断。');
+  item.trajectory = await explainPlanImpact(previousPlan, plan, item);
+  item.impact = item.trajectory.headline;
+  trackProductEvent('evidence_added', { type: item.type, changedPlan: hasMeaningfulPlanChange(previousPlan, plan), hasFile: Boolean(item.filename) });
+  persistProfile();
+  renderActivity();
 }
 
 async function parseSelectedEvidenceFile(file) {
@@ -765,24 +896,41 @@ async function parseSelectedEvidenceFile(file) {
 function renderResumeReview(extracted = {}) {
   const labels = { stage: '当前阶段', school: '学校层次', major: '专业', target: '目标岗位', experience: '经历摘要' };
   const fields = ['stage', 'school', 'major', 'experience'];
-  $('#resumeReviewList').innerHTML = fields.map(key => `<label class="resume-review-row"><input type="checkbox" data-resume-field="${key}" checked><span><small>${labels[key]}</small><strong>${escapeHtml(extracted[key] || '未识别')}</strong></span></label>`).join('') + `<div class="resume-target-note"><span>当前目标岗位</span><strong>${escapeHtml(profile.target || '未填写')}</strong><small>默认保留，不会被简历自动覆盖</small></div>`;
+  const aiSuggestion = extracted.recommendation?.target || '';
+  const suggestedTarget = profile.target || '';
+  const suggestion = aiSuggestion ? `<button class="text-button ai-target-suggestion" type="button" data-target="${escapeHtml(aiSuggestion)}">采用 AI 建议：${escapeHtml(aiSuggestion)}</button><small>AI 建议 · 置信度 ${Number(extracted.recommendation?.confidence) || 0}% · ${escapeHtml(extracted.recommendation?.basis || '基于简历经历推测')}</small>` : '<small>AI 暂未从简历中得到足够稳定的方向建议</small>';
+  $('#resumeReviewList').innerHTML = fields.map(key => `<label class="resume-review-row"><input type="checkbox" data-resume-field="${key}" checked><span><small>${labels[key]}</small><strong>${escapeHtml(extracted[key] || '未识别')}</strong></span></label>`).join('') + `<label class="resume-target-note"><span>你毕业想去的岗位</span><input id="resumeTargetInput" value="${escapeHtml(suggestedTarget)}" placeholder="自己填写，或采用下方 AI 建议" required>${suggestion}<small>采用建议后仍需由你确认，AI 不会静默改写目标</small></label>`;
 }
 
 async function confirmResumeProfile() {
   if (!pendingResume) return closeModal($('#resumeReviewModal'));
   const extracted = pendingResume.extracted || {};
+  const target = String($('#resumeTargetInput')?.value || '').trim();
+  if (!target) {
+    showToast('先确认你毕业想去的目标岗位');
+    $('#resumeTargetInput')?.focus();
+    return;
+  }
+  const previousPlan = plan;
   const fields = $$('.resume-review-row input:checked').map(input => input.dataset.resumeField);
   fields.forEach(field => { if (extracted[field]) profile[field] = extracted[field]; });
-  profile.evidence.push({ type: '简历', filename: pendingResume.filename, content: pendingResume.text, addedAt: new Date().toISOString() });
+  profile.target = target;
+  const resumeItem = { type: '简历', filename: pendingResume.filename, content: pendingResume.text, summary: extracted.experience || '简历关键信息已进入职业画像', addedAt: new Date().toISOString() };
+  profile.evidence.push(resumeItem);
   persistProfile();
   closeModal($('#resumeReviewModal'));
   pendingResume = null;
   await recalculate('简历信息已经确认，画像和岗位路径同步更新。');
+  resumeItem.trajectory = await explainPlanImpact(previousPlan, plan, resumeItem);
+  resumeItem.impact = resumeItem.trajectory.headline;
+  trackProductEvent('evidence_added', { type: '简历', changedPlan: hasMeaningfulPlanChange(previousPlan, plan), hasFile: true });
+  persistProfile();
+  renderActivity();
 }
 
 async function explainEvidence(item) {
   const box = $('#evidenceInsight');
-  if (!box) return;
+  if (!box) return null;
   box.hidden = false;
   $('#insightProof').textContent = '正在提炼：这份材料证明了什么…';
   $('#insightGap').textContent = '';
@@ -795,10 +943,12 @@ async function explainEvidence(item) {
     $('#insightProof').textContent = `证明：${(insight.proves || []).join('；') || '暂未提炼出稳定证据'}`;
     $('#insightGap').textContent = `缺口：${(insight.gaps || []).join('；') || '继续积累外部反馈'}`;
     $('#insightNext').textContent = `下一步：${insight.next || '补充结果与反馈'}`;
+    return insight;
   } catch {
     $('#insightProof').textContent = '材料已保存，后续规划会继续参考它。';
     $('#insightGap').textContent = '';
     $('#insightNext').textContent = '';
+    return null;
   }
 }
 
@@ -844,17 +994,6 @@ function bindEvents() {
     location.href = 'lab.html';
   }));
 
-  $('#sideFocusBtn').addEventListener('click', () => {
-    if (!hasStoredProfile) return $('#editProfile').click();
-    const first = $('.task-toggle:not(.verified)');
-    if (first) {
-      setWorkspaceView('route');
-      setTimeout(() => openActionGuide(first.dataset.task), 350);
-    } else {
-      setWorkspaceView('evidence');
-    }
-  });
-
   $('#decisionCta').addEventListener('click', () => {
     const task = $('#decisionCta').dataset.task;
     if (task) return openActionGuide(task);
@@ -862,13 +1001,6 @@ function bindEvents() {
     $('[data-compose="update"]').click();
     setTimeout(() => $('#updateInput').focus(), 350);
   });
-  $('.hero-state button').addEventListener('click', () => {
-    if (!hasStoredProfile) return $('#editProfile').click();
-    const task = $('#decisionCta').dataset.task;
-    if (task) return openActionGuide(task);
-    setWorkspaceView('evidence');
-  });
-
   $$('.checkin button').forEach(button => button.addEventListener('click', () => {
     profile.mood = button.dataset.mood;
     persistProfile();
@@ -933,6 +1065,7 @@ function bindEvents() {
       showToast('已恢复为待完成');
     } else {
       completedTasks.add(name);
+      trackProductEvent('action_started', { task: name, entry: 'checklist' });
       taskEvents[name] = new Date().toISOString();
       task.classList.add('done', 'proof-pending');
       task.closest('.action-row')?.classList.add('just-completed');
@@ -991,6 +1124,13 @@ function bindEvents() {
     }
   });
   $('#resumeReviewConfirm')?.addEventListener('click', confirmResumeProfile);
+  $('#resumeReviewList')?.addEventListener('click', event => {
+    const suggestion = event.target.closest('.ai-target-suggestion');
+    if (!suggestion) return;
+    $('#resumeTargetInput').value = suggestion.dataset.target || '';
+    $('#resumeTargetInput').focus();
+    showToast('已填入 AI 建议方向，请确认后再生成规划');
+  });
 
   const openProfile = () => { fillProfileForm(); openModal($('#profileModal')); };
   $('#editProfile').addEventListener('click', openProfile);
@@ -1011,6 +1151,7 @@ function bindEvents() {
       event.target.elements[missing]?.focus();
       return;
     }
+    trackProductEvent('profile_submitted', { firstProfile: !hasStoredProfile, hasExperience: Boolean(String(formData.experience || '').trim()) });
     profile = { ...profile, ...formData };
     persistProfile();
     closeModal($('#profileModal'));
@@ -1025,6 +1166,8 @@ function bindEvents() {
     closeModal($('#outcomeModal'));
     closeModal($('#drawer'));
     verifiedTasks.add(activeTask);
+    delete actionCommitments[activeTask];
+    trackProductEvent('effective_action_completed', { task: activeTask, hasLink: Boolean(link), outcomeLength: text.length });
     $$('.task-toggle').filter(task => task.dataset.task === activeTask).forEach(task => {
       task.classList.remove('proof-pending');
       task.classList.add('done', 'verified');
@@ -1035,6 +1178,18 @@ function bindEvents() {
 
   $('#drawerDone').addEventListener('click', () => {
     if (!activeTask) return closeModal($('#drawer'));
+    if (!completedTasks.has(activeTask) && !actionCommitments[activeTask]) {
+      const estimatedDays = Math.max(1, Number($('#drawerDone').dataset.estimatedDays) || 3);
+      actionCommitments[activeTask] = window.PathwiseCommitmentModel.createCommitment(estimatedDays);
+      writeJSON(STORAGE.commitments, actionCommitments);
+      trackProductEvent('action_committed', { task: activeTask, estimatedDays });
+      closeModal($('#drawer'));
+      renderStages(plan || makeLocalPlan());
+      showToast(`已设为当前行动 · ${formatCommitment(actionCommitments[activeTask])}`);
+      companionSay('我会替你守住这一步。完成后留下结果，它才会真正推进路径。');
+      return;
+    }
+    if (!completedTasks.has(activeTask)) trackProductEvent('action_started', { task: activeTask, entry: 'guide' });
     completedTasks.add(activeTask);
     taskEvents[activeTask] = taskEvents[activeTask] || new Date().toISOString();
     $$('.task-toggle').filter(task => task.dataset.task === activeTask).forEach(task => task.classList.add('done', 'proof-pending'));
@@ -1059,6 +1214,16 @@ function bindEvents() {
   });
   $('#closeCompanion').addEventListener('click', () => $('#companion').classList.add('hidden'));
 
+  $('#growthShare')?.addEventListener('click', async () => {
+    try {
+      await copyText(buildGrowthShareText());
+      trackProductEvent('growth_summary_copied', { verifiedActions: verifiedTasks.size, hasPlanImpact: profile.evidence.some(item => item?.impact) });
+      showToast('成长摘要已复制，可以分享给同学或导师');
+    } catch {
+      showToast('复制失败，请稍后重试');
+    }
+  });
+
   $('#growthExport').addEventListener('click', () => {
     const report = { profile, plan, completedTasks: [...completedTasks], generatedAt: new Date().toISOString() };
     const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
@@ -1071,8 +1236,19 @@ function bindEvents() {
   });
 
   document.addEventListener('keydown', event => {
-    if (event.key !== 'Escape') return;
-    $$('.open').forEach(element => closeModal(element));
+    const activeModal = $('.modal-backdrop.open, .drawer-backdrop.open');
+    if (event.key === 'Escape') {
+      $$('.open').forEach(element => closeModal(element));
+      return;
+    }
+    if (event.key !== 'Tab' || !activeModal) return;
+    const focusable = $$('button:not([disabled]), [href], input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])', activeModal)
+      .filter(element => element.offsetParent !== null);
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
   });
 
 }
@@ -1087,6 +1263,9 @@ function setWorkspaceView(view = 'overview') {
 }
 
 function init() {
+  $$('.modal-backdrop, .drawer-backdrop').forEach(element => { element.setAttribute('aria-hidden', 'true'); element.inert = true; });
+  $('.outcome-modal')?.setAttribute('aria-label', '留下这一步的成果');
+  $('.reset-modal')?.setAttribute('aria-label', '重新开始这条路径');
   document.body.classList.toggle('is-onboarding', !hasStoredProfile);
   if (!hasStoredProfile) {
     $('#profileModalTitle').textContent = '建立你的职业画像';

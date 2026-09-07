@@ -19,11 +19,11 @@
         <button class="side-link active" data-target="overview"><span class="nav-icon">⌂</span>今日规划</button>
         <a class="side-link side-anchor" href="map.html"><span class="nav-icon">⌖</span>进步地图</a>
         <button class="side-link" data-target="route"><span class="nav-icon">✓</span>行动计划<span class="nav-count" id="pendingCount">3</span></button>
-        <button class="side-link" data-target="evidence"><span class="nav-icon">＋</span>进展记录</button>
+        <button class="side-link" data-target="evidence"><span class="nav-icon">＋</span>进展与成长</button>
       </nav>
       <div class="side-label side-tools-label">CAREER TOOLS</div>
       <a class="side-link side-anchor" href="lab.html"><span class="nav-icon">⇄</span>比较职业方向</a>
-      <div class="side-focus"><div class="side-progress-head"><span>路径进度</span><b id="sideProgressValue">0%</b></div><div class="side-progress-track"><i id="sideProgressFill"></i></div><small id="weeklyProgress">按行动难度与投入估算</small><span class="kicker">NEXT STEP</span><strong id="focusTitle">完成第一个规划行动</strong><p id="focusMeta">每一步都会让下一次规划更贴近你。</p><button id="sideFocusBtn" type="button">打开行动 <span>→</span></button></div>
+      <div class="side-focus"><div class="side-progress-head"><span>本轮路径进度</span><b id="sideProgressValue">0%</b></div><div class="side-progress-track"><i id="sideProgressFill"></i></div><small id="weeklyProgress">按行动难度与投入估算</small></div>
       <button class="reset-path" type="button"><span>↻</span> 重置我的路径</button>
       <div class="user"><div class="avatar" id="avatarText">P</div><div><strong>我的职业路径</strong><small id="userMeta">进展自动保存</small></div><span class="save-dot" title="数据已保存"></span></div>
     </aside>
@@ -37,8 +37,6 @@
           <p>小径记住你的真实经历，把目标拆成现在、毕业和更长远的每一步，并在你有新进展时持续更新。</p>
           <form class="ai-command" id="aiCommandForm"><span>✦</span><input id="aiCommandInput" autocomplete="off" placeholder="告诉小径最近发生了什么…"><button type="submit">交给 AI ↗</button></form>
           <div class="ai-command-examples"><span>试试：</span><button type="button">我刚完成一次面试</button><button type="button">我做完了一个项目</button><button type="button">我想换目标岗位</button></div>
-          <div class="hero-state"><span class="state-pulse"></span><div><small>今天先做这一件事</small><strong id="heroState">你的下一段经历，应该补哪块能力？</strong></div><button type="button" data-start="route">打开行动 →</button></div>
-          <div class="quick-starts" aria-label="规划入口"><button type="button" data-start="route"><b>01</b><span>查看今日规划</span><i>→</i></button><button type="button" data-start="lab"><b>02</b><span>比较未来方向</span><i>→</i></button><button type="button" data-start="evidence"><b>03</b><span>更新最新进展</span><i>→</i></button></div>
           <div class="top-actions"><button class="primary" id="editProfile" type="button">更新基本信息 <span>↗</span></button><button class="icon-button" id="themeToggle" type="button" aria-label="切换深色模式" title="切换深色模式">◐</button></div>
         </div>
         <div class="hero-visual">
@@ -67,7 +65,7 @@
 
       <section class="decision-pulse" id="decisionPulse" aria-label="当前决策建议">
         <div class="pulse-copy"><span class="kicker">TODAY'S PLAN</span><h2 id="decisionTitle">今天，先完成一项规划行动</h2><p id="decisionReason">小径会根据你的目标、证据和进展，告诉你现在最值得做什么。</p><button class="pulse-cta" id="decisionCta" type="button">打开这一步 <span>→</span></button><div class="plan-delta" id="planDelta" hidden><span class="kicker">PLAN UPDATE</span><strong id="planDeltaTitle"></strong><p id="planDeltaText"></p></div><div class="checkin"><span>今天的状态</span><button type="button" data-mood="steady">稳稳推进</button><button type="button" data-mood="anxious">有点焦虑</button><button type="button" data-mood="tired">需要缓一缓</button><small id="moodNote"></small></div></div>
-        <div class="pulse-signals"><div><span>目标方向</span><strong id="pulseTarget">待分析</strong><small>你正在靠近的岗位</small></div><div><span>关键缺口</span><strong id="pulseGap">待分析</strong><small>最该优先补的证据</small></div><div><span>真实证据</span><strong id="pulseUpdate">0 份</strong><small>成果会提高判断可信度</small></div></div>
+        <div class="pulse-signals"><div><span>为了抵达</span><strong id="pulseTarget">待分析</strong><small>你的毕业目标</small></div><div><span>这一步优先补</span><strong id="pulseGap">待分析</strong><small>当前最影响匹配的证据</small></div></div>
       </section>
 
       <section class="role-section page-section" id="roles">
@@ -100,12 +98,11 @@
           </div>
           <div class="activity-stream"><div class="stream-head"><span>PATH ACTIVITY</span><small id="activityCount">0 条记录</small></div><div class="update-list" id="updateList"></div></div>
         </div>
-      </section>
-
-      <section class="growth-report page-section" id="growth">
+        <section class="growth-report page-section" id="growth">
         <div class="growth-head"><div><span class="kicker">LIVING REPORT</span><h2>这份报告，会和你一起生长</h2><p>路径只因完成行动而推进；证据负责让 AI 的判断更可信。</p></div><div class="growth-score"><strong id="growthScore">0</strong><span>%<br>难度加权进度</span></div></div>
         <div class="growth-path" id="growthTree"></div>
-        <div class="growth-foot"><span id="growthHint">完成第一个行动，点亮路径的下一站。</span><div class="growth-actions"><a class="text-button" href="map.html">进入进步地图 <span>→</span></a><button class="text-button" id="growthExport" type="button">导出成长报告 <span>↓</span></button></div></div>
+        <div class="growth-foot"><span id="growthHint">完成第一个行动，点亮路径的下一站。</span><div class="growth-actions"><a class="text-button" href="report.html">查看完整变化档案 <span>→</span></a><button class="text-button" id="growthShare" type="button">复制成长摘要 <span>↗</span></button><button class="text-button" id="growthExport" type="button">导出数据 <span>↓</span></button></div></div>
+        </section>
       </section>
     </section>
   </main>
@@ -117,7 +114,7 @@
 
   <div class="modal-backdrop" id="profileModal"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="profileModalTitle"><button class="close modal-close" aria-label="关闭">×</button><span class="kicker">PROFILE INPUT</span><h2 id="profileModalTitle">更新你的职业画像</h2><p>基本信息负责定方向，之后的项目、面试与成果随时从“进展与证据链”补充。</p><button class="resume-entry" id="modalResumeBtn" type="button"><span>已有简历？</span><strong>上传 PDF，让它成为第一份证据 <b>→</b></strong></button><form id="profileForm"><div class="form-grid"><label>当前阶段<select name="stage" required><option value="">请选择当前阶段</option><option>本科大一</option><option>本科大二</option><option>本科大三上</option><option>本科大三下</option><option>本科大四</option><option>研一</option><option>研二</option><option>研三</option><option>已毕业</option></select></label><label>学校层次<select name="school" required><option value="">请选择学校层次</option><option>985</option><option>211</option><option>双一流</option><option>一本</option><option>其他</option></select></label><label>专业<input name="major" placeholder="例如：信息安全" required></label><label>目标岗位<input name="target" placeholder="例如：软件安全工程师" required></label></div><label>已有经历<textarea name="experience" rows="5" placeholder="技能、项目、实习、比赛或其他可验证经历"></textarea></label><button class="primary full" type="submit">重新生成完整路径 <span>↗</span></button></form></div></div>
 
-  <div class="modal-backdrop" id="resumeReviewModal"><div class="modal resume-review" role="dialog" aria-modal="true" aria-labelledby="resumeReviewTitle"><button class="close modal-close" aria-label="关闭">×</button><span class="kicker">RESUME SIGNALS</span><h2 id="resumeReviewTitle">简历识别结果</h2><p>确认后，选中的信息会更新基本画像；你的目标岗位默认保留，不会被简历自动改掉。</p><div class="resume-review-list" id="resumeReviewList"></div><div class="modal-actions"><button class="text-button resume-review-cancel" type="button">暂不覆盖</button><button class="primary" id="resumeReviewConfirm" type="button">确认并重新规划</button></div></div></div>
+  <div class="modal-backdrop" id="resumeReviewModal"><div class="modal resume-review" role="dialog" aria-modal="true" aria-labelledby="resumeReviewTitle"><button class="close modal-close" aria-label="关闭">×</button><span class="kicker">RESUME SIGNALS</span><h2 id="resumeReviewTitle">简历识别结果</h2><p>确认简历识别出的事实，再明确你毕业想去的岗位；已有目标会保留，也可以随时修改。</p><div class="resume-review-list" id="resumeReviewList"></div><div class="modal-actions"><button class="text-button resume-review-cancel" type="button">暂不覆盖</button><button class="primary" id="resumeReviewConfirm" type="button">确认并重新规划</button></div></div></div>
 
   <div class="modal-backdrop" id="outcomeModal"><div class="modal outcome-modal" role="dialog" aria-modal="true"><button class="close modal-close" aria-label="关闭">×</button><span class="kicker">ACTION OUTCOME</span><h2>留下这一步的成果</h2><p id="outcomePrompt">成果会进入证据链，并用于重新调整后续路径。</p><form id="outcomeForm"><label>成果总结<textarea id="outcomeText" rows="4" required placeholder="我完成了什么？结果、数据或反馈是什么？"></textarea></label><label>成果链接（可选）<input id="outcomeLink" type="url" placeholder="GitHub、作品集或文档链接"></label><div class="modal-actions"><button class="text-button outcome-cancel" type="button">稍后记录</button><button class="primary" type="submit">保存并更新路径</button></div></form></div></div>
 
@@ -125,6 +122,7 @@
 
   <div class="toast" id="toast" role="status"></div>
   <script src="path-model.js"></script>
+  <script src="commitment-model.js"></script>
   <script src="career.js"></script>
 </body>
 </html>

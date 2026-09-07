@@ -1,5 +1,11 @@
-const profile = JSON.parse(localStorage.getItem('pathwiseProfile') || '{}');
-const plan = JSON.parse(localStorage.getItem('pathwisePlan') || 'null');
+const read = (key, fallback) => {
+  try { return JSON.parse(localStorage.getItem(key)) ?? fallback; }
+  catch { return fallback; }
+};
+const profile = read('pathwiseProfile', {});
+let plan = read('pathwisePlan', null);
+try { if (plan) window.PathwiseModel.validatePlanShape(plan); }
+catch (_) { plan = null; }
 const roles = [...(plan?.currentRoles || []).slice(0, 1), ...(plan?.graduationRoles || []).slice(0, 2)];
 const choices = roles.length ? roles : [{ title: profile.target || '目标岗位', match: 50 }, { title: '相邻方向岗位', match: 42 }, { title: '进阶方向岗位', match: 30 }];
 const escapeHtml = value => String(value || '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
