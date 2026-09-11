@@ -47,11 +47,11 @@ function chatBody(config, messages, maxTokens, stream) {
 export async function upstreamChat(env, messages, maxTokens = 1800) {
   const config = modelConfig(env);
   if (!config.key) throw new Error('AI Key 未配置');
-  const response = await fetch(`${config.base}/chat/completions`, {
+  const response = await fetchWithTimeout(`${config.base}/chat/completions`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${config.key}`, 'Content-Type': 'application/json' },
     body: JSON.stringify(chatBody(config, messages, maxTokens, true))
-  });
+  }, env);
   if (!response.ok || !response.body) throw new Error(`模型服务返回 ${response.status}`);
   return response;
 }
@@ -59,14 +59,14 @@ export async function upstreamChat(env, messages, maxTokens = 1800) {
 export async function chat(env, messages, maxTokens = 1800, options = {}) {
   const config = modelConfig(env);
   if (!config.key) throw new Error('AI Key 未配置');
-  const response = await fetch(`${config.base}/chat/completions`, {
+  const response = await fetchWithTimeout(`${config.base}/chat/completions`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${config.key}`,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify(chatBody(config, messages, maxTokens, Boolean(options.stream)))
-  });
+  }, env);
   if (!response.ok) throw new Error(`模型服务返回 ${response.status}`);
   if (options.stream && response.body) {
     const reader = response.body.getReader();
@@ -104,6 +104,24 @@ export async function chat(env, messages, maxTokens = 1800, options = {}) {
   }
   const payload = await response.json();
   return payload.choices?.[0]?.message?.content || '';
+}
+
+// Keep model calls bounded so a stalled upstream cannot pin a Pages request
+// indefinitely. The limit is configurable for self-hosted gateways while
+// remaining conservative by default.
+async function fetchWithTimeout(url, options, env = {}) {
+  const configured = Number(env.AI_TIMEOUT_MS || env.AI_TIMEOUT || 120000);
+  const timeoutMs = Number.isFinite(configured) ? Math.max(1000, Math.min(configured, 300000)) : 120000;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort('upstream timeout'), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } catch (error) {
+    if (controller.signal.aborted) throw new Error(`模型服务超时（>${Math.round(timeoutMs / 1000)}秒）`);
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export function parseModelJson(content) {

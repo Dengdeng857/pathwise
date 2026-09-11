@@ -12,6 +12,7 @@ const compact = (value, length = 24) => {
 const profile = read('pathwiseProfile', {});
 const storedPlan = read('pathwisePlan', {});
 const plan = profile.stage && profile.target ? storedPlan : {};
+const hasRoute = Boolean(profile.stage && profile.target && Object.keys(plan).length);
 const completed = new Set(read('pathwiseTasks', []));
 const verified = new Set(read('pathwiseTaskProofs', []));
 const history = read('pathwisePlanHistory', []);
@@ -213,8 +214,9 @@ const traveledPoints = partialPolyline(baseCoords, weightedProgress.percent / 10
 lines.appendChild(svg('path', { d:curvePath(traveledPoints), class:'route-traveled' }));
 const progressPoint = traveledPoints[traveledPoints.length - 1];
 if (profile.stage && weightedProgress.percent > 0 && weightedProgress.percent < 100) lines.appendChild(svg('circle', { cx:progressPoint[0], cy:progressPoint[1], r:'7', class:'route-live-marker' }));
-const branchSpecs = buildBranchSpecs();
-const destinationFork = Math.min(...branchSpecs.filter(branch => branch.kind === 'destination').map(branch => branch.ratio));
+const branchSpecs = hasRoute ? buildBranchSpecs() : [];
+const destinationForks = branchSpecs.filter(branch => branch.kind === 'destination').map(branch => branch.ratio);
+const destinationFork = destinationForks.length ? Math.min(...destinationForks) : 1;
 branchSpecs.forEach((branch, index) => {
   const start = pointOnPolyline(baseCoords, branch.kind === 'destination' ? destinationFork : branch.ratio);
   const routePoints = [start, [(start[0] + branch.end[0]) / 2, (start[1] + branch.end[1]) / 2], branch.end];
@@ -231,6 +233,13 @@ mainNodes.forEach((node, index) => {
   drawStation(node, index, coords[index], status);
 });
 
+if (!hasRoute) {
+  const canvas = $('#routeCanvas');
+  canvas.classList.add('is-empty');
+  canvas.insertAdjacentHTML('beforeend', '<div class="route-empty"><span class="route-empty-mark">P</span><strong>你的职业地图还没绘制</strong><p>先建立画像，地图会根据目标、行动成果和面试反馈动态改道。</p><a href="career.html#overview">建立第一份画像 ↗</a></div>');
+  document.querySelector('.map-layer-switch').setAttribute('hidden', '');
+}
+
 const current = mainNodes[currentIndex];
 const next = mainNodes[Math.min(mainNodes.length - 1, currentIndex + 1)];
 $('#mapDestination').textContent = destination;
@@ -242,7 +251,7 @@ $('#routePercent').textContent = `${percent}%`;
 $('#routeProgressFill').style.width = `${percent}%`;
 $('#routeProgressMeta').textContent = weightedProgress.totalWeight ? `已获得 ${Number(weightedProgress.creditedWeight.toFixed(1))} / ${weightedProgress.totalWeight} 路径点 · ${mapFeedback.mapProgress}% 已有成果验证` : '按行动难度与投入估算';
 $('#nextMilestone').textContent = mapFeedback.next ? `下一里程碑：${mapFeedback.next.title} · ${mapFeedback.next.progress}%` : '当前路线的里程碑已经全部点亮';
-$('#mapUpdated').textContent = plan.source === 'ai' ? 'AI 已根据最新画像生成' : '等待第一份智能规划';
+$('#mapUpdated').textContent = !hasRoute ? '从你的第一份画像开始' : plan.source === 'ai' ? 'AI 已根据最新画像生成' : '等待第一份智能规划';
 const lastChange = history[history.length - 1];
 const lastTrajectory = trajectory[trajectory.length - 1];
 if (lastTrajectory?.narrative) {

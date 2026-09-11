@@ -10,6 +10,8 @@
 4. 完成行动后记录成果，自动进入“进展与证据链”。
 5. AI 根据新证据重新调整岗位匹配与后续路径。
 
+长期产品目标与分阶段执行路线见 [docs/PRODUCT-ROADMAP.md](docs/PRODUCT-ROADMAP.md)；面向评委、贡献者与合作方的完整介绍见 [docs/PROJECT-INTRODUCTION.md](docs/PROJECT-INTRODUCTION.md)。
+
 ## 本地运行
 
 ```bash

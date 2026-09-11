@@ -6,6 +6,7 @@ const STORAGE = {
   plan: 'pathwisePlan',
   tasks: 'pathwiseTasks',
   guides: 'pathwiseActionGuides',
+  guideSteps: 'pathwiseGuideSteps',
   history: 'pathwisePlanHistory',
   trajectory: 'pathwiseTrajectoryHistory',
   events: 'pathwiseProductEvents',
@@ -793,11 +794,14 @@ function localGuide(action) {
   };
 }
 
-function guideHtml(guide) {
+function guideHtml(guide, checkedSteps = []) {
   const resources = (guide.resources || []).map(item => `<span>${escapeHtml(item)}</span>`).join('');
   const effort = Math.max(1, Math.min(5, Number(guide.effort) || window.PathwiseModel.estimateEffort(guide.title || '', 0, plan || {})));
   const effortLabel = ['', '轻量', '较轻', '中等', '较重', '里程碑'][Math.round(effort)];
-  return `<div class="guide-detail"><h3>照着做</h3><ol>${(guide.steps || []).map((step, index) => `<li><b>0${index + 1}</b><span>${escapeHtml(step)}</span></li>`).join('')}</ol></div>
+  const steps = guide.steps || [];
+  const checked = new Set((Array.isArray(checkedSteps) ? checkedSteps : []).map(Number));
+  const doneCount = steps.reduce((count, _, index) => count + (checked.has(index) ? 1 : 0), 0);
+  return `<div class="guide-detail"><div class="guide-session-head"><h3>走向理想职业的这一步</h3><span><b data-guide-done>${doneCount}</b> / ${steps.length}</span></div><div class="guide-session-progress" aria-hidden="true"><i data-guide-progress style="width:${steps.length ? Math.round(doneCount / steps.length * 100) : 0}%"></i></div><ol>${steps.map((step, index) => `<li><button class="guide-step${checked.has(index) ? ' done' : ''}" type="button" aria-pressed="${checked.has(index)}" data-step-index="${index}"><b>0${index + 1}</b><span>${escapeHtml(step)}</span><i aria-hidden="true">✓</i></button></li>`).join('')}</ol><small class="guide-session-note">勾完小步骤只代表正在执行；提交成果后才会缩短你与目标岗位的距离。</small></div>
     <div class="guide-meta"><div><small>预计投入 · ${escapeHtml(effortLabel)} ${Math.round(effort)}/5</small><strong>${escapeHtml(guide.estimatedTime || (guide.estimatedDays ? `约 ${guide.estimatedDays} 天` : '按个人节奏完成'))}</strong></div><div><small>完成标准</small><strong>${escapeHtml(guide.doneWhen || '形成可验证成果')}</strong></div></div>
     ${resources ? `<div class="guide-resources"><small>准备这些</small>${resources}</div>` : ''}
     <div class="guide-evidence"><small>完成后留下什么</small><p>${escapeHtml(guide.evidence || '记录成果与复盘。')}</p></div>`;
@@ -823,7 +827,8 @@ async function openActionGuide(action) {
   $('#drawerKicker').textContent = guide.source === 'ai' ? 'AI ACTION GUIDE' : 'ACTION GUIDE';
   $('#drawerTitle').textContent = guide.title || action;
   $('#drawerIntro').textContent = guide.why || '';
-  $('#drawerContent').innerHTML = guideHtml(guide);
+  const guideStepState = readJSON(STORAGE.guideSteps, {});
+  $('#drawerContent').innerHTML = guideHtml(guide, guideStepState[action]);
   $('#drawerDone').dataset.estimatedDays = String(Math.max(1, Number(guide.estimatedDays) || ({ 1: 1, 2: 2, 3: 4, 4: 7, 5: 14 }[Math.round(Number(guide.effort) || 3)])));
 }
 
@@ -1180,6 +1185,22 @@ function bindEvents() {
     });
     syncTaskUI();
     await addEvidence(`${activeTask}：${text}${link ? `（成果链接：${link}）` : ''}`, { type: '行动成果' });
+  });
+
+  $('#drawerContent').addEventListener('click', event => {
+    const step = event.target.closest('.guide-step');
+    if (!step) return;
+    const pressed = step.getAttribute('aria-pressed') !== 'true';
+    step.setAttribute('aria-pressed', String(pressed));
+    step.classList.toggle('done', pressed);
+    const allSteps = $$('.guide-step', $('#drawerContent'));
+    const done = allSteps.filter(item => item.getAttribute('aria-pressed') === 'true').length;
+    const stepState = readJSON(STORAGE.guideSteps, {});
+    stepState[activeTask] = allSteps.filter(item => item.getAttribute('aria-pressed') === 'true').map(item => Number(item.dataset.stepIndex));
+    writeJSON(STORAGE.guideSteps, stepState);
+    $('[data-guide-done]', $('#drawerContent')).textContent = String(done);
+    $('[data-guide-progress]', $('#drawerContent')).style.width = `${allSteps.length ? Math.round(done / allSteps.length * 100) : 0}%`;
+    if (done === allSteps.length && done > 0) companionSay('这一步的执行过程已经走完。把结果留下来，我才能重新计算你与目标岗位的距离。');
   });
 
   $('#drawerDone').addEventListener('click', () => {

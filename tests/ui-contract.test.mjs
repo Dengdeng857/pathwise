@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 const careerHtml = await readFile(new URL('../career.html', import.meta.url), 'utf8');
 const mapHtml = await readFile(new URL('../map.html', import.meta.url), 'utf8');
 const mapJs = await readFile(new URL('../map.js', import.meta.url), 'utf8');
+const careerJs = await readFile(new URL('../career.js', import.meta.url), 'utf8');
 const labHtml = await readFile(new URL('../lab.html', import.meta.url), 'utf8');
 const criticalIds = [
   'decisionCta', 'editProfile', 'profileForm', 'stageList',
@@ -32,5 +33,8 @@ assert.equal((mapHtml.match(/data-map-layer=/g) || []).length, 3, 'map must expo
 assert.match(mapHtml, /class="route-terrain"/, 'map must preserve chapter terrain instead of falling back to a plain chart');
 assert.match(mapJs, /destinationFork/, 'career alternatives must share one readable fork point');
 assert.match(mapJs, /curvePath\(/, 'career routes must render as a map-like curved path');
+assert.match(careerJs, /class="guide-step"/, 'action guide must expose executable micro-steps');
+assert.match(careerJs, /aria-pressed/, 'micro-step controls must expose accessible state');
+assert.match(careerJs, /提交成果后才会缩短/, 'micro-step feedback must preserve evidence-based progress rules');
 
 console.log('ui contract tests passed');

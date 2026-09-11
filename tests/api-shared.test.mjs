@@ -44,4 +44,19 @@ assert.deepEqual(shared.normalizeDirectionRecommendation({ target: ' AI 产品�
 assert.deepEqual(shared.normalizeDirectionRecommendation({ target: 'string', basis: 'string', confidence: 99 }), { target: '', basis: '', confidence: 0 });
 assert.deepEqual(shared.normalizeDirectionRecommendation(null), { target: '', basis: '', confidence: 0 });
 
+// Model calls must receive an abort signal so a stalled gateway cannot hang
+// the Pages function forever. Keep the mock response minimal and deterministic.
+const originalFetch = globalThis.fetch;
+let capturedSignal;
+globalThis.fetch = async (_url, options) => {
+  capturedSignal = options.signal;
+  return { ok: true, json: async () => ({ choices: [{ message: { content: '{"ok":true}' } }] }) };
+};
+assert.equal(await shared.chat({ OPENAI_API_KEY: 'test-key', AI_TIMEOUT_MS: 1000 }, [{ role: 'user', content: 'test' }]), '{"ok":true}');
+assert.ok(capturedSignal instanceof AbortSignal, 'chat must pass an AbortSignal to fetch');
+globalThis.fetch = originalFetch;
+
+const planSource = await readFile(new URL('../functions/api/plan.js', import.meta.url), 'utf8');
+assert.match(planSource, /请求 JSON 格式无效/);
+
 console.log('api shared tests passed');

@@ -2,7 +2,9 @@ import { chat, compactProfile, json, normalizePlanContract, parseModelJson, retr
 
 export async function onRequestPost({ request, env }) {
   try {
-    const profile = compactProfile(await request.json());
+    let payload;
+    try { payload = await request.json(); } catch (_) { return json({ error: '请求 JSON 格式无效' }, 400); }
+    const profile = compactProfile(payload || {});
     const cases = await retrieveCases(env, profile, 5);
     const schema = '{"profile":"用用户事实写一句画像","summary":"不超过80字的判断","currentRoles":[{"title":"现实可投岗位","match":0,"reason":"基于证据的原因"}],"graduationRoles":[{"title":"毕业可达岗位","match":0,"reason":"需要补齐什么"}],"gaps":["具体缺口"],"actions":["可执行行动"],"actionGuides":[{"title":"必须与 actions 完全一致","why":"行动价值","steps":["具体步骤"],"doneWhen":"完成标准","effort":3,"estimatedDays":7}],"stages":[{"title":"阶段名称","why":"阶段目的","tasks":["阶段任务"],"doneWhen":"阶段完成标准"}]}';
     const messages = [{
