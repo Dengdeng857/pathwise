@@ -244,6 +244,11 @@ a { color: inherit; text-decoration: none; }
 .upload-evidence small { color: rgba(237,250,246,.45); font-size: 8px; }
 .evidence-status { min-height: 16px; margin-top: 8px; color: #b9d9d0; font-size: 9px; }
 .evidence-status.error { color: #f0a79a; }
+.outcome-quality { margin-top: 12px; padding: 12px 14px; border: 1px solid #e5b46a; background: #fff8e8; color: #70501d; display: grid; gap: 4px; }
+.outcome-quality b { font-size: 11px; }
+.outcome-quality span { font-size: 10px; line-height: 1.6; }
+.outcome-quality.ready { border-color: #8dcbb4; background: #edf8f1; color: #174f43; }
+.modal-actions .primary:disabled { opacity: .45; cursor: not-allowed; filter: grayscale(.25); }
 .evidence-insight { margin-top: 15px; padding: 13px; border: 1px solid rgba(199,239,138,.25); background: rgba(199,239,138,.07); }
 .evidence-insight > div { display: grid; gap: 7px; margin-top: 9px; }
 .evidence-insight strong { color: rgba(239,255,249,.82); font-size: 9px; line-height: 1.55; font-weight: 600; }

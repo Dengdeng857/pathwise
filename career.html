@@ -116,13 +116,14 @@
 
   <div class="modal-backdrop" id="resumeReviewModal"><div class="modal resume-review" role="dialog" aria-modal="true" aria-labelledby="resumeReviewTitle"><button class="close modal-close" aria-label="关闭">×</button><span class="kicker">RESUME SIGNALS</span><h2 id="resumeReviewTitle">简历识别结果</h2><p>确认简历识别出的事实，再明确你毕业想去的岗位；已有目标会保留，也可以随时修改。</p><div class="resume-review-list" id="resumeReviewList"></div><div class="modal-actions"><button class="text-button resume-review-cancel" type="button">暂不覆盖</button><button class="primary" id="resumeReviewConfirm" type="button">确认并重新规划</button></div></div></div>
 
-  <div class="modal-backdrop" id="outcomeModal"><div class="modal outcome-modal" role="dialog" aria-modal="true"><button class="close modal-close" aria-label="关闭">×</button><span class="kicker">ACTION OUTCOME</span><h2>留下这一步的成果</h2><p id="outcomePrompt">成果会进入证据链，并用于重新调整后续路径。</p><form id="outcomeForm"><label>成果总结<textarea id="outcomeText" rows="4" required placeholder="我完成了什么？结果、数据或反馈是什么？"></textarea></label><label>成果链接（可选）<input id="outcomeLink" type="url" placeholder="GitHub、作品集或文档链接"></label><div class="modal-actions"><button class="text-button outcome-cancel" type="button">稍后记录</button><button class="primary" type="submit">保存并更新路径</button></div></form></div></div>
+  <div class="modal-backdrop" id="outcomeModal"><div class="modal outcome-modal" role="dialog" aria-modal="true"><button class="close modal-close" aria-label="关闭">×</button><span class="kicker">ACTION OUTCOME</span><h2>留下这一步的成果</h2><p id="outcomePrompt">成果会进入证据链，并用于重新调整后续路径。</p><form id="outcomeForm"><label>成果总结<textarea id="outcomeText" rows="4" required placeholder="我完成了什么？结果、数据或反馈是什么？"></textarea></label><label>成果链接（可选）<input id="outcomeLink" type="url" placeholder="GitHub、作品集或文档链接"></label><div class="outcome-quality" id="outcomeQuality" aria-live="polite"><b>成果可信度</b><span>写清产出，并补充数据、反馈或链接中的至少一项。</span></div><div class="modal-actions"><button class="text-button" id="outcomeSaveProgress" type="button">先记为进展</button><button class="primary" id="outcomeSubmit" type="submit" disabled>保存并更新路径</button></div></form></div></div>
 
   <div class="modal-backdrop" id="resetModal"><div class="modal reset-modal" role="dialog" aria-modal="true"><button class="close modal-close" aria-label="关闭">×</button><span class="kicker">RESET PATH</span><h2>重新开始这条路径？</h2><p>将清除当前浏览器中的画像、行动、进展与证据。服务器配置和模型 Key 不受影响。</p><div class="modal-actions"><button class="text-button reset-cancel" type="button">保留当前数据</button><button class="danger reset-confirm" type="button">确认全部重置</button></div></div></div>
 
   <div class="toast" id="toast" role="status"></div>
   <script src="path-model.js"></script>
   <script src="commitment-model.js"></script>
+  <script src="evidence-quality-model.js"></script>
   <script src="career.js"></script>
 </body>
 </html>

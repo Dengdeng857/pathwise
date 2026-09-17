@@ -841,8 +841,19 @@ function openOutcome(action) {
   $('#outcomePrompt').textContent = `“${action}”已完成。记录结果后，它会进入证据链并重新校准计划。`;
   $('#outcomeText').value = '';
   $('#outcomeLink').value = '';
+  renderOutcomeQuality();
   openModal($('#outcomeModal'));
   setTimeout(() => $('#outcomeText').focus(), 40);
+}
+
+function renderOutcomeQuality() {
+  const result = window.PathwiseEvidenceQuality.assessOutcome($('#outcomeText').value, $('#outcomeLink').value);
+  const box = $('#outcomeQuality');
+  box.classList.toggle('ready', result.credible);
+  box.querySelector('b').textContent = result.credible ? `成果可信度 · ${result.score}` : `还不能作为成果 · ${result.score}`;
+  box.querySelector('span').textContent = result.message;
+  $('#outcomeSubmit').disabled = !result.credible;
+  return result;
 }
 
 function fillProfileForm() {
@@ -1173,18 +1184,32 @@ function bindEvents() {
     event.preventDefault();
     const text = $('#outcomeText').value.trim();
     const link = $('#outcomeLink').value.trim();
-    if (!text) return;
+    const quality = renderOutcomeQuality();
+    if (!quality.credible) return showToast('先补充一项可验证信息，或暂时记为进展');
     closeModal($('#outcomeModal'));
     closeModal($('#drawer'));
     verifiedTasks.add(activeTask);
     delete actionCommitments[activeTask];
-    trackProductEvent('effective_action_completed', { task: activeTask, hasLink: Boolean(link), outcomeLength: text.length });
+    trackProductEvent('effective_action_completed', { task: activeTask, hasLink: Boolean(link), outcomeLength: text.length, evidenceScore:quality.score });
     $$('.task-toggle').filter(task => task.dataset.task === activeTask).forEach(task => {
       task.classList.remove('proof-pending');
       task.classList.add('done', 'verified');
     });
     syncTaskUI();
     await addEvidence(`${activeTask}：${text}${link ? `（成果链接：${link}）` : ''}`, { type: '行动成果' });
+  });
+
+  $('#outcomeText').addEventListener('input', renderOutcomeQuality);
+  $('#outcomeLink').addEventListener('input', renderOutcomeQuality);
+  $('#outcomeSaveProgress').addEventListener('click', async () => {
+    const text = $('#outcomeText').value.trim();
+    if (!text) return showToast('先写下这一步目前做到哪里');
+    const task = activeTask;
+    closeModal($('#outcomeModal'));
+    closeModal($('#drawer'));
+    await addUpdate(`${task}：${text}`);
+    trackProductEvent('action_progress_saved', { task, outcomeLength:text.length });
+    showToast('已记为进展 · 不会增加职业进度');
   });
 
   $('#drawerContent').addEventListener('click', event => {
