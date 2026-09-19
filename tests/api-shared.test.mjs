@@ -43,6 +43,11 @@ assert.deepEqual(shared.normalizeDirectionRecommendation({ target: ' AI 产品�
 });
 assert.deepEqual(shared.normalizeDirectionRecommendation({ target: 'string', basis: 'string', confidence: 99 }), { target: '', basis: '', confidence: 0 });
 assert.deepEqual(shared.normalizeDirectionRecommendation(null), { target: '', basis: '', confidence: 0 });
+const compactEvidence = shared.compactProfile({ evidence:[{ id:'ev_1', type:'行动成果', filename:'private.pdf', content:'完成优化', verification:'verified', confidence:.91, supports:['性能优化'], exposesGap:['缺少反馈'] }] }).evidence[0];
+assert.equal(compactEvidence.id, 'ev_1');
+assert.equal(compactEvidence.verification, 'verified');
+assert.deepEqual(compactEvidence.supports, ['性能优化']);
+assert.equal('filename' in compactEvidence, false, 'model context must not expose evidence filenames');
 
 // Model calls must receive an abort signal so a stalled gateway cannot hang
 // the Pages function forever. Keep the mock response minimal and deterministic.

@@ -231,8 +231,15 @@ export function compactProfile(profile = {}) {
     experience: String(profile.experience || '').slice(0, 3000),
     updates: (profile.updates || []).slice(-10).map(item => String(item).slice(0, 600)),
     evidence: (profile.evidence || []).slice(-6).map(item => ({
+      id: String(item.id || '').slice(0, 80),
       type: String(item.type || '').slice(0, 80),
-      content: String(item.content || '').slice(0, 1800)
+      summary: String(item.summary || '').slice(0, 500),
+      content: String(item.content || '').slice(0, 1800),
+      capturedAt: String(item.capturedAt || item.addedAt || '').slice(0, 40),
+      confidence: Math.max(0, Math.min(1, Number(item.confidence) || 0)),
+      verification: String(item.verification || '').slice(0, 32),
+      supports: (Array.isArray(item.supports) ? item.supports : []).slice(0, 8).map(value => String(value).slice(0, 180)),
+      exposesGap: (Array.isArray(item.exposesGap) ? item.exposesGap : []).slice(0, 8).map(value => String(value).slice(0, 180))
     }))
   };
 }

@@ -32,5 +32,9 @@ assert.equal(profileTrace.verification, 'self_reported');
 assert.match(profileTrace.claim, /本科大三/);
 const unrelated = model.roleTrace({ title:'数据分析师', reason:'需要 SQL 与指标分析' }, [verified], { target:'数据分析师' });
 assert.equal(unrelated.evidenceId, 'profile', 'unrelated evidence must not be presented as role support');
+const tracedPlan = model.attachPlanEvidence({ currentRoles:[{ title:'后端工程师', reason:'需要性能优化能力' }], graduationRoles:[] }, [verified], { target:'后端工程师' });
+assert.equal(tracedPlan.evidenceTraceVersion, 1);
+assert.deepEqual(tracedPlan.currentRoles[0].evidenceRefs, [verified.id]);
+assert.equal(tracedPlan.currentRoles[0].evidenceTrace.claim, '性能优化');
 
 console.log('evidence schema model tests passed');

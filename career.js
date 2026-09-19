@@ -109,7 +109,8 @@ function hasModelPlaceholder(value) {
 }
 
 function validatePlanResult(result) {
-  return window.PathwiseModel.validatePlanShape(window.PathwiseModel.normalizePlanShape(result));
+  const valid = window.PathwiseModel.validatePlanShape(window.PathwiseModel.normalizePlanShape(result));
+  return window.PathwiseEvidence.attachPlanEvidence(valid, profile.evidence, profile);
 }
 
 const emptyProfile = { ...DEFAULT_PROFILE, stage: '', school: '', major: '', target: '', experience: '', updates: [], evidence: [] };
@@ -147,6 +148,10 @@ if (plan) {
     localStorage.removeItem(STORAGE.tasks);
     localStorage.removeItem(STORAGE.taskEvents);
     localStorage.removeItem(STORAGE.taskProofs);
+  } else {
+    // Persist the versioned, evidence-linked form so the map, report and next
+    // session consume the same migrated plan rather than repeating migration.
+    writeJSON(STORAGE.plan, plan);
   }
 }
 let completedTasks = new Set(readJSON(STORAGE.tasks, []));
@@ -170,7 +175,7 @@ function makeLocalPlan(sourceProfile = profile, reason = '') {
   const skill = security ? '安全基础与工程实践' : '岗位核心技能';
   const proof = security ? '代码审计、漏洞分析或安全工具成果' : '可量化项目结果';
 
-  return {
+  const localPlan = {
     schemaVersion:'pathwise.plan.v1',
     source: 'local',
     status: 'degraded',
@@ -205,6 +210,7 @@ function makeLocalPlan(sourceProfile = profile, reason = '') {
       { title: `冲刺毕业 ${target}`, why: '根据投递和面试反馈持续修正，不用一份静态计划押完整个校招。', tasks: ['建立分层投递岗位池', '每周进行一次模拟面试', '每次反馈后更新计划和材料'], doneWhen: '完成目标岗位的成套投递并获得理想结果' }
     ]
   };
+  return window.PathwiseEvidence.attachPlanEvidence(localPlan, sourceProfile.evidence || [], sourceProfile);
 }
 
 function showToast(message) {
@@ -585,7 +591,7 @@ function renderRoles(currentPlan) {
     const match = Math.max(0, Math.min(100, Number(role.match || 0)));
     $('h3', card).textContent = role.title || '待生成岗位';
     $('p', card).textContent = compact(role.reason || '补充画像后生成岗位判断。', 112);
-    const trace = window.PathwiseEvidence.roleTrace(role, profile.evidence, profile);
+    const trace = role.evidenceTrace || window.PathwiseEvidence.roleTrace(role, profile.evidence, profile);
     $('.role-evidence', card).textContent = `依据 · ${trace.verificationLabel} · ${compact(trace.claim, 34)}`;
     $('.match-value', card).textContent = match || '--';
     $('.match-track i', card).style.width = `${match}%`;

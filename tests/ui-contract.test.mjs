@@ -33,6 +33,8 @@ assert.match(careerJs, /evidenceId:evidence\?\.id \|\| evidence\?\.addedAt/, 'tr
 assert.match(careerJs, /PathwiseModel\.normalizePlanShape/, 'streamed and cached plans must share a versioned normalization contract');
 assert.match(careerJs, /activeEvidenceTransaction\?\.signature === signature/, 'identical evidence submissions must share one transaction');
 assert.match(careerJs, /这份材料已经在证据链中/, 'persisted duplicate evidence must be rejected before replanning');
+assert.match(careerJs, /PathwiseEvidence\.attachPlanEvidence/, 'plan state must persist role-to-evidence traces');
+assert.match(careerJs, /writeJSON\(STORAGE\.plan, plan\)/, 'validated cached plans must be persisted after migration');
 assert.match(careerJs, /lastValidAt/, 'the UI must retain the last valid plan timestamp');
 assert.ok(labHtml.indexOf('path-model.js') < labHtml.indexOf('lab.js'), 'shared model must load before direction comparison');
 assert.ok(mapHtml.indexOf('path-model.js') < mapHtml.indexOf('map.js'), 'shared model must load before the map');

@@ -100,7 +100,9 @@ def compact_profile(profile):
         if budget<=0: break
         if isinstance(item,dict):
             content=str(item.get('content',''))[:min(3500,budget)]
-            evidence.append({'type':str(item.get('type',''))[:100],'content':content})
+            try: confidence=max(0,min(1,float(item.get('confidence') or 0)))
+            except (TypeError,ValueError): confidence=0
+            evidence.append({'id':str(item.get('id',''))[:80],'type':str(item.get('type',''))[:100],'summary':str(item.get('summary',''))[:500],'content':content,'capturedAt':str(item.get('capturedAt') or item.get('addedAt') or '')[:40],'confidence':confidence,'verification':str(item.get('verification',''))[:32],'supports':[str(value)[:180] for value in (item.get('supports') or [])[:8]],'exposesGap':[str(value)[:180] for value in (item.get('exposesGap') or [])[:8]]})
         else:
             content=str(item)[:min(3500,budget)]
             evidence.append(content)

@@ -111,5 +111,20 @@
     };
   }
 
-  return { VERSION, createEvidence, isUsable, normalizeEvidence, roleTrace, verificationLabel };
+  function attachPlanEvidence(plan, evidence = [], profile = {}) {
+    if (!plan || typeof plan !== 'object') return plan;
+    const attach = role => {
+      if (!role || typeof role !== 'object') return role;
+      const evidenceTrace = roleTrace(role, evidence, profile);
+      return { ...role, evidenceRefs:[evidenceTrace.evidenceId], evidenceTrace };
+    };
+    return {
+      ...plan,
+      evidenceTraceVersion:1,
+      currentRoles:(Array.isArray(plan.currentRoles) ? plan.currentRoles : []).map(attach),
+      graduationRoles:(Array.isArray(plan.graduationRoles) ? plan.graduationRoles : []).map(attach)
+    };
+  }
+
+  return { VERSION, attachPlanEvidence, createEvidence, isUsable, normalizeEvidence, roleTrace, verificationLabel };
 });
