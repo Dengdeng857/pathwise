@@ -528,8 +528,42 @@ function hasMeaningfulPlanChange(previousPlan, nextPlan) {
     || (previousPlan.actions?.[0] || '') !== (nextPlan.actions?.[0] || '');
 }
 
+function buildLocalTrajectoryResult(previousPlan = {}, nextPlan = {}, evidence = {}) {
+  const planRoles = currentPlan => [...(Array.isArray(currentPlan?.currentRoles) ? currentPlan.currentRoles : []), ...(Array.isArray(currentPlan?.graduationRoles) ? currentPlan.graduationRoles : [])].filter(role => role?.title);
+  const rolesBefore = new Map(planRoles(previousPlan).map(role => [role.title, Number(role.match || 0)]));
+  const rolesAfter = new Map(planRoles(nextPlan).map(role => [role.title, Number(role.match || 0)]));
+  const roleChanges = [];
+  rolesAfter.forEach((match, title) => {
+    if (!rolesBefore.has(title)) roleChanges.push({ type:'role-added', title, match });
+    else if (Math.abs(match - rolesBefore.get(title)) >= 3) roleChanges.push({ type:'match-changed', title, from:rolesBefore.get(title), to:match, delta:match - rolesBefore.get(title) });
+  });
+  rolesBefore.forEach((match, title) => { if (!rolesAfter.has(title)) roleChanges.push({ type:'role-removed', title, match }); });
+  const diff = (before, after) => {
+    const oldSet = new Set(Array.isArray(before) ? before : []);
+    const newSet = new Set(Array.isArray(after) ? after : []);
+    return { added:[...newSet].filter(item => !oldSet.has(item)), removed:[...oldSet].filter(item => !newSet.has(item)) };
+  };
+  const gaps = diff(previousPlan.gaps, nextPlan.gaps);
+  const actions = diff(previousPlan.actions, nextPlan.actions);
+  const changed = roleChanges.length > 0 || gaps.added.length > 0 || gaps.removed.length > 0 || actions.added.length > 0 || actions.removed.length > 0;
+  const kind = roleChanges.some(item => item.type === 'role-added' || item.type === 'role-removed') ? 'route-change' : changed ? 'priority-shift' : 'no-material-change';
+  const delta = {
+    version:1, kind, impactScore:Math.min(100, roleChanges.length * 16 + (gaps.added.length + gaps.removed.length + actions.added.length + actions.removed.length) * 7),
+    evidence:{ type:String(evidence.type || '').slice(0, 80), label:String(evidence.filename || evidence.summary || evidence.title || '').slice(0, 120), excerpt:compact(evidence.content || '', 240) },
+    roleChanges:roleChanges.slice(0, 8), gaps:{ added:gaps.added.slice(0, 5), resolved:gaps.removed.slice(0, 5) }, actions:{ added:actions.added.slice(0, 5), deprioritized:actions.removed.slice(0, 5) }, changed
+  };
+  return { delta, narrative:{ headline:kind === 'route-change' ? '你的职业路线出现了新分支' : kind === 'priority-shift' ? '下一步的优先级已调整' : '路线暂时不需要改变', why:changed ? '本地规则已根据新增证据比较岗位、差距与行动。' : '这份新材料已保存，但暂不足以改变当前路线。', nextMove:nextPlan?.actions?.[0] || '补充可验证的结果、数据或外部反馈。', confidence:changed ? 70 : 90 }, source:'rules' };
+}
+
+function persistTrajectoryResult(result, evidence) {
+  if (!result?.delta || !result?.narrative) return;
+  const trajectory = readJSON(STORAGE.trajectory, []);
+  trajectory.push({ at:new Date().toISOString(), evidenceId:evidence?.id || evidence?.addedAt || '', ...result });
+  writeJSON(STORAGE.trajectory, trajectory.slice(-20));
+}
+
 async function explainPlanImpact(previousPlan, nextPlan, evidence) {
-  const fallback = { headline:summarizePlanImpact(previousPlan, nextPlan), why:'已根据新增证据重新比较岗位、差距与行动优先级。', nextMove:nextPlan?.actions?.[0] || '' };
+  const fallback = buildLocalTrajectoryResult(previousPlan, nextPlan, evidence);
   try {
     const result = await requestJSON('/api/trajectory-update', {
       method:'POST', headers:{ 'Content-Type':'application/json' },
@@ -539,13 +573,12 @@ async function explainPlanImpact(previousPlan, nextPlan, evidence) {
         previousPlan:previousPlan || {}, nextPlan:nextPlan || {}
       })
     }, 18000);
-    if (!result?.delta || !result?.narrative?.headline) return fallback;
-    const trajectory = readJSON(STORAGE.trajectory, []);
-    trajectory.push({ at:new Date().toISOString(), evidenceId:evidence?.id || evidence?.addedAt || '', ...result });
-    writeJSON(STORAGE.trajectory, trajectory.slice(-20));
+    if (!result?.delta || !result?.narrative?.headline) { persistTrajectoryResult(fallback, evidence); return fallback.narrative; }
+    persistTrajectoryResult(result, evidence);
     return result.narrative;
   } catch {
-    return fallback;
+    persistTrajectoryResult(fallback, evidence);
+    return fallback.narrative;
   }
 }
 

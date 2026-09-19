@@ -30,6 +30,8 @@ assert.match(careerJs, /chunk\?\.error[\s\S]{0,180}code:'upstream'/, 'SSE error 
 assert.match(careerHtml, /class="role-evidence"/g, 'role cards must expose their evidence basis');
 assert.match(careerJs, /PathwiseEvidence\.roleTrace/, 'role decisions must resolve to deterministic evidence traces');
 assert.match(careerJs, /evidenceId:evidence\?\.id \|\| evidence\?\.addedAt/, 'trajectory must persist the stable evidence id');
+assert.match(careerJs, /function buildLocalTrajectoryResult/, 'trajectory must have a deterministic local fallback');
+assert.match(careerJs, /persistTrajectoryResult\(fallback, evidence\)/, 'API failure must still persist evidence-to-route history');
 assert.match(careerJs, /PathwiseModel\.normalizePlanShape/, 'streamed and cached plans must share a versioned normalization contract');
 assert.match(careerJs, /activeEvidenceTransaction\?\.signature === signature/, 'identical evidence submissions must share one transaction');
 assert.match(careerJs, /这份材料已经在证据链中/, 'persisted duplicate evidence must be rejected before replanning');
