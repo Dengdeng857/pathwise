@@ -10,6 +10,7 @@ const compact = (value, length = 24) => {
 };
 
 const profile = read('pathwiseProfile', {});
+const evidence = Array.isArray(profile.evidence) ? profile.evidence.map(item => window.PathwiseEvidence.normalizeEvidence(item)) : [];
 const storedPlan = read('pathwisePlan', {});
 const plan = profile.stage && profile.target ? storedPlan : {};
 const hasRoute = Boolean(profile.stage && profile.target && Object.keys(plan).length);
@@ -255,9 +256,11 @@ $('#mapUpdated').textContent = !hasRoute ? '从你的第一份画像开始' : pl
 const lastChange = history[history.length - 1];
 const lastTrajectory = trajectory[trajectory.length - 1];
 if (lastTrajectory?.narrative) {
+  const source = evidence.find(item => item.id === lastTrajectory.evidenceId || item.addedAt === lastTrajectory.evidenceId) || window.PathwiseEvidence.normalizeEvidence(lastTrajectory.delta?.evidence || {});
   $('#rerouteNote').hidden = false;
   $('#rerouteTitle').textContent = lastTrajectory.narrative.headline;
   $('#rerouteReason').textContent = lastTrajectory.narrative.why;
+  $('#rerouteSource').textContent = `依据 · ${window.PathwiseEvidence.verificationLabel(source)} · ${compact(source.source?.label || source.type || '新增证据', 30)}`;
   $('#mapUpdated').textContent = `${lastTrajectory.source === 'ai' ? 'AI 解释' : '规则校准'} · ${new Date(lastTrajectory.at).toLocaleDateString('zh-CN')}`;
 } else if (lastChange) {
   $('#rerouteNote').hidden = false;
@@ -268,6 +271,7 @@ if (lastTrajectory?.narrative) {
     : progressChanged
       ? `路线重估 ${lastChange.previousProgress}% → ${lastChange.progress}%：行动难度或顺序已改变`
       : `下一站：${lastChange.action || next.title}`;
+  $('#rerouteSource').textContent = '依据 · 规划版本变化';
   $('#mapUpdated').textContent = `${lastChange.mode === 'ai' ? 'AI' : '本地规划'} · ${new Date(lastChange.at).toLocaleDateString('zh-CN')}`;
 }
 $('#closeStation').addEventListener('click', () => $('#stationPanel').classList.remove('open'));

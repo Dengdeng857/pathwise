@@ -24,6 +24,7 @@ assert.match(careerHtml, /id=["']outcomeSaveProgress["']/, 'weak outcomes must r
 assert.ok(labHtml.indexOf('path-model.js') < labHtml.indexOf('lab.js'), 'shared model must load before direction comparison');
 assert.ok(mapHtml.indexOf('path-model.js') < mapHtml.indexOf('map.js'), 'shared model must load before the map');
 assert.ok(mapHtml.indexOf('game-feedback-model.js') < mapHtml.indexOf('map.js'), 'feedback model must load before the map');
+assert.ok(mapHtml.indexOf('evidence-schema-model.js') < mapHtml.indexOf('map.js'), 'evidence schema must load before the map');
 for (const id of ['routeLines', 'routeStations', 'stationPanel', 'closeStation', 'centerCurrent', 'rerouteNote']) {
   assert.match(mapHtml, new RegExp(`id=["']${id}["']`), `map is missing #${id}`);
 }
@@ -36,6 +37,7 @@ assert.match(mapJs, /addEventListener\(['"]click['"]/, 'map stations must remain
 assert.equal((mapHtml.match(/data-map-layer=/g) || []).length, 3, 'map must expose main, quest and destination layers');
 assert.match(mapHtml, /class="route-terrain"/, 'map must preserve chapter terrain instead of falling back to a plain chart');
 assert.match(mapJs, /destinationFork/, 'career alternatives must share one readable fork point');
+assert.match(mapJs, /verificationLabel/, 'map reroutes must expose the evidence verification level');
 assert.match(mapJs, /curvePath\(/, 'career routes must render as a map-like curved path');
 assert.match(careerJs, /class="guide-step"/, 'action guide must expose executable micro-steps');
 assert.match(careerJs, /aria-pressed/, 'micro-step controls must expose accessible state');
