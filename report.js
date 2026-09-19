@@ -9,7 +9,7 @@ const compact = (value, size = 110) => {
 };
 
 const profile = read('pathwiseProfile', {});
-const evidence = Array.isArray(profile.evidence) ? profile.evidence : [];
+const evidence = Array.isArray(profile.evidence) ? profile.evidence.map(item => window.PathwiseEvidence.normalizeEvidence(item)) : [];
 const trajectory = read('pathwiseTrajectoryHistory', []).filter(item => item?.delta && item?.narrative).slice(-20).reverse();
 const labels = { 'route-change':'路线改变', 'priority-shift':'优先级调整', 'fit-update':'匹配度更新', 'no-material-change':'判断保持' };
 document.body.classList.add(trajectory.length ? 'has-trajectory' : 'empty-report');
@@ -33,6 +33,12 @@ function confidenceLabel(value) {
   return '暂作为弱信号观察';
 }
 
+function evidenceMeta(source) {
+  const verification = window.PathwiseEvidence.verificationLabel(source);
+  const origin = source?.source?.label || source?.filename || source?.type || '新增证据';
+  return `${verification} · ${compact(origin, 22)}`;
+}
+
 function roleText(change) {
   if (change.type === 'match-changed') return `${change.title} ${change.delta > 0 ? '↑' : '↓'} ${Math.abs(change.delta)} 分`;
   if (change.type === 'role-added') return `新增方向 · ${change.title}`;
@@ -51,10 +57,10 @@ function renderLatest() {
   }
   const source = evidenceFor(item);
   document.querySelector('#latestImpact').textContent = item.delta.impactScore ?? '—';
-  document.querySelector('#latestKind').textContent = `${labels[item.delta.kind] || '路径更新'} · ${compact(source.filename || source.label || source.type || '新增证据', 24)}`;
+  document.querySelector('#latestKind').textContent = `${labels[item.delta.kind] || '路径更新'} · ${evidenceMeta(source)}`;
   document.querySelector('#latestTitle').textContent = item.narrative.headline;
   document.querySelector('#latestWhy').textContent = item.narrative.why;
-  document.querySelector('#latestMeta').textContent = `${dateLabel(item.at)} · ${confidenceLabel(item.narrative.confidence)}`;
+  document.querySelector('#latestMeta').textContent = `${dateLabel(source.capturedAt || item.at)} · ${confidenceLabel(source.confidence * 100 || item.narrative.confidence)}`;
   document.querySelector('#latestNext').textContent = item.narrative.nextMove;
 }
 
@@ -65,7 +71,7 @@ function renderStats() {
   document.querySelector('#routeCount').textContent = routes;
   document.querySelector('#resolvedCount').textContent = resolved;
   document.querySelector('#fitCount').textContent = strengthened;
-  document.querySelector('#evidenceCount').textContent = evidence.length;
+  document.querySelector('#evidenceCount').textContent = `${evidence.filter(item => window.PathwiseEvidence.isUsable(item)).length}/${evidence.length}`;
 }
 
 function makeHistoryItem(item) {
@@ -75,7 +81,7 @@ function makeHistoryItem(item) {
   const source = evidenceFor(item);
   article.dataset.kind = delta.kind;
   fragment.querySelector('.history-date').textContent = dateLabel(item.at);
-  fragment.querySelector('.history-kind').textContent = `${labels[delta.kind] || '路径更新'} · ${compact(source.filename || source.label || source.type || '证据', 28)}`;
+  fragment.querySelector('.history-kind').textContent = `${labels[delta.kind] || '路径更新'} · ${evidenceMeta(source)}`;
   fragment.querySelector('.history-title').textContent = item.narrative.headline;
   fragment.querySelector('.history-why').textContent = item.narrative.why;
   fragment.querySelector('.history-impact').textContent = `${delta.impactScore || 0} IMPACT`;

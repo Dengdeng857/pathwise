@@ -9,6 +9,8 @@ for (const id of ['profileLine', 'latestChange', 'latestImpact', 'latestTitle', 
 }
 assert.match(script, /pathwiseTrajectoryHistory/, 'report should consume trajectory history');
 assert.match(script, /pathwiseProfile/, 'report should resolve evidence and profile context');
+assert.match(html, /evidence-schema-model\.js/, 'report should load the shared evidence schema');
+assert.match(script, /PathwiseEvidence/, 'report should normalize legacy evidence through the shared schema');
 assert.match(script, /delta\.gaps\?\.resolved/, 'report should surface resolved gaps');
 assert.match(script, /delta\.roleChanges/, 'report should surface role changes');
 assert.match(script, /aria-expanded/, 'history details should be accessible');

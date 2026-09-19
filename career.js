@@ -95,7 +95,7 @@ function validatePlanResult(result) {
 const emptyProfile = { ...DEFAULT_PROFILE, stage: '', school: '', major: '', target: '', experience: '', updates: [], evidence: [] };
 let profile = isSeededDemo ? emptyProfile : { ...emptyProfile, ...(storedProfile || {}) };
 profile.updates = Array.isArray(profile.updates) ? profile.updates : [];
-profile.evidence = Array.isArray(profile.evidence) ? profile.evidence.map(item => typeof item === 'string' ? { type: '材料', content: item } : item).filter(Boolean) : [];
+profile.evidence = Array.isArray(profile.evidence) ? profile.evidence.map(item => window.PathwiseEvidence.normalizeEvidence(item)).filter(item => item.content || item.filename) : [];
 profile.updates = unique(profile.updates.map(String).filter(update => {
   const text = update.trim();
   if (!text || (/已上传/.test(text) && /解析完成/.test(text))) return false;
@@ -876,11 +876,15 @@ async function addEvidence(content, meta = {}) {
   const text = String(content || '').trim();
   if (!text) return showToast('先粘贴内容或选择一个文件');
   const previousPlan = plan;
-  const item = { type: meta.type || $('#evidenceType').value, filename: meta.filename || '', content: text, summary: meta.summary || '', addedAt: new Date().toISOString() };
+  const item = window.PathwiseEvidence.createEvidence({ type: meta.type || $('#evidenceType').value, filename: meta.filename || '', content: text, summary: meta.summary || '', source:meta.source, verification:meta.verification, confidence:meta.confidence, supports:meta.supports, exposesGap:meta.exposesGap, quality:meta.quality });
   profile.evidence.push(item);
   persistProfile();
   $('#evidenceInput').value = '';
   item.insight = await explainEvidence(item);
+  if (item.insight) {
+    item.supports = unique([...(item.supports || []), ...(item.insight.proves || [])]).slice(0, 8);
+    item.exposesGap = unique([...(item.exposesGap || []), ...(item.insight.gaps || [])]).slice(0, 8);
+  }
   await recalculate('材料已进入证据链，岗位与行动路径已经重新判断。');
   item.trajectory = await explainPlanImpact(previousPlan, plan, item);
   item.impact = item.trajectory.headline;
@@ -910,7 +914,7 @@ async function parseSelectedEvidenceFile(file) {
     return true;
   }
   status.textContent = '解析完成，正在根据材料调整路径…';
-  await addEvidence(parsed.text, { type: $('#evidenceType').value, filename: file.name });
+  await addEvidence(parsed.text, { type: $('#evidenceType').value, filename: file.name, source:{ kind:'uploaded_file', label:file.name }, verification:'supported', confidence:.72 });
   status.textContent = '材料已保存，计划已完成一次更新。';
   return true;
 }
@@ -937,7 +941,7 @@ async function confirmResumeProfile() {
   const fields = $$('.resume-review-row input:checked').map(input => input.dataset.resumeField);
   fields.forEach(field => { if (extracted[field]) profile[field] = extracted[field]; });
   profile.target = target;
-  const resumeItem = { type: '简历', filename: pendingResume.filename, content: pendingResume.text, summary: extracted.experience || '简历关键信息已进入职业画像', addedAt: new Date().toISOString() };
+  const resumeItem = window.PathwiseEvidence.createEvidence({ type: '简历', filename: pendingResume.filename, content: pendingResume.text, summary: extracted.experience || '简历关键信息已进入职业画像', source:{ kind:'resume', label:pendingResume.filename || '用户确认的简历' }, verification:'supported', confidence:Number(extracted.recommendation?.confidence || 72) / 100 });
   profile.evidence.push(resumeItem);
   persistProfile();
   closeModal($('#resumeReviewModal'));
@@ -1196,7 +1200,10 @@ function bindEvents() {
       task.classList.add('done', 'verified');
     });
     syncTaskUI();
-    await addEvidence(`${activeTask}：${text}${link ? `（成果链接：${link}）` : ''}`, { type: '行动成果' });
+    await addEvidence(`${activeTask}：${text}${link ? `（成果链接：${link}）` : ''}`, {
+      type:'行动成果', source:{ kind:'action_outcome', label:activeTask }, verification:'verified', confidence:quality.score / 100,
+      supports:[activeTask], quality:{ score:quality.score, signals:quality.signals }
+    });
   });
 
   $('#outcomeText').addEventListener('input', renderOutcomeQuality);

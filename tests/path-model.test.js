@@ -88,5 +88,10 @@ assert.equal(storageSafe.evidence.length, 30);
 assert.ok(storageSafe.updates.every(item => item.length <= 1200));
 assert.ok(storageSafe.evidence.every(item => item.content.length <= 24000));
 assert.match(storageSafe.evidence[0].filename, /resume-10/, '容量受限时应保留最新证据');
+const schemaSafe = PathwiseModel.prepareProfileForStorage({ evidence:[{ schemaVersion:1, id:'ev_test', type:'行动成果', content:'完成优化', source:{ kind:'action_outcome', label:'性能优化' }, confidence:.9, verification:'verified', supports:['性能能力'], exposesGap:['缺少用户反馈'], quality:{ score:90, signals:{ metric:true } } }] }).evidence[0];
+assert.equal(schemaSafe.schemaVersion, 1);
+assert.equal(schemaSafe.source.kind, 'action_outcome');
+assert.equal(schemaSafe.verification, 'verified');
+assert.deepEqual(schemaSafe.supports, ['性能能力']);
 
 console.log('path-model tests passed');

@@ -18,6 +18,7 @@ for (const id of criticalIds) {
 assert.ok(careerHtml.indexOf('path-model.js') < careerHtml.indexOf('career.js'), 'shared model must load before the workbench');
 assert.ok(careerHtml.indexOf('commitment-model.js') < careerHtml.indexOf('career.js'), 'commitment model must load before the workbench');
 assert.ok(careerHtml.indexOf('evidence-quality-model.js') < careerHtml.indexOf('career.js'), 'evidence quality model must load before the workbench');
+assert.ok(careerHtml.indexOf('evidence-schema-model.js') < careerHtml.indexOf('career.js'), 'evidence schema model must load before the workbench');
 assert.match(careerHtml, /id=["']outcomeQuality["']/, 'outcome modal must explain evidence quality');
 assert.match(careerHtml, /id=["']outcomeSaveProgress["']/, 'weak outcomes must remain saveable as progress');
 assert.ok(labHtml.indexOf('path-model.js') < labHtml.indexOf('lab.js'), 'shared model must load before direction comparison');

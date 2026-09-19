@@ -17,12 +17,35 @@
   function prepareProfileForStorage(profile = {}) {
     const updates = Array.isArray(profile.updates) ? profile.updates : [];
     const evidence = Array.isArray(profile.evidence) ? profile.evidence : [];
+    const boundedList = value => unique(Array.isArray(value) ? value : []).slice(0, 8).map(item => String(item).slice(0, 180));
+    const boundedEvidence = item => {
+      if (typeof item === 'string') return { type:'材料', content:item.slice(0, 24000) };
+      const insight = item?.insight && typeof item.insight === 'object' ? {
+        proves:boundedList(item.insight.proves), gaps:boundedList(item.insight.gaps), next:String(item.insight.next || '').slice(0, 240)
+      } : null;
+      return {
+        schemaVersion:Number(item?.schemaVersion) || undefined,
+        id:String(item?.id || '').slice(0, 80),
+        type:String(item?.type || '').slice(0, 80),
+        filename:String(item?.filename || '').slice(0, 240),
+        summary:String(item?.summary || '').slice(0, 600),
+        content:String(item?.content || '').slice(0, 24000),
+        capturedAt:String(item?.capturedAt || '').slice(0, 40),
+        addedAt:String(item?.addedAt || '').slice(0, 40),
+        source:{ kind:String(item?.source?.kind || '').slice(0, 40), label:String(item?.source?.label || '').slice(0, 240) },
+        confidence:Math.max(0, Math.min(1, Number(item?.confidence) || 0)),
+        verification:String(item?.verification || '').slice(0, 32),
+        supports:boundedList(item?.supports),
+        exposesGap:boundedList(item?.exposesGap),
+        impact:String(item?.impact || '').slice(0, 240),
+        quality:item?.quality && typeof item.quality === 'object' ? { score:Math.max(0, Math.min(100, Number(item.quality.score) || 0)), signals:{ result:Boolean(item.quality.signals?.result), metric:Boolean(item.quality.signals?.metric), feedback:Boolean(item.quality.signals?.feedback), link:Boolean(item.quality.signals?.link) } } : null,
+        insight
+      };
+    };
     return {
       ...profile,
       updates: updates.slice(-100).map(item => String(item || '').slice(0, 1200)),
-      evidence: evidence.slice(-30).map(item => typeof item === 'string'
-        ? { type: '材料', content: item.slice(0, 24000) }
-        : { ...item, type:String(item?.type || '').slice(0, 80), filename:String(item?.filename || '').slice(0, 240), summary:String(item?.summary || '').slice(0, 600), content:String(item?.content || '').slice(0, 24000) })
+      evidence: evidence.slice(-30).map(boundedEvidence)
     };
   }
 
