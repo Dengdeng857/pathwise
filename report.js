@@ -9,8 +9,10 @@ const compact = (value, size = 110) => {
 };
 
 const profile = read('pathwiseProfile', {});
+const demoMode = read('pathwiseDemoMode', false) === true;
 const evidence = Array.isArray(profile.evidence) ? profile.evidence.map(item => window.PathwiseEvidence.normalizeEvidence(item)) : [];
 const trajectory = read('pathwiseTrajectoryHistory', []).filter(item => item?.delta && item?.narrative).slice(-20).reverse();
+if (demoMode) document.body.classList.add('demo-mode');
 const labels = { 'route-change':'路线改变', 'priority-shift':'优先级调整', 'fit-update':'匹配度更新', 'no-material-change':'判断保持' };
 document.body.classList.add(trajectory.length ? 'has-trajectory' : 'empty-report');
 
@@ -120,6 +122,7 @@ function renderHistory(filter = 'all') {
 
 const profileBits = [profile.stage, profile.school, profile.major].filter(Boolean).join(' · ');
 document.querySelector('#profileLine').textContent = profileBits ? `${profileBits}  →  ${profile.target || '目标待明确'}` : '建立职业画像后，这里会开始记录你的变化。';
+if (demoMode) document.querySelector('#profileLine').textContent += ' · 匿名合成示例';
 document.querySelector('#historyCount').textContent = trajectory.length;
 if (!trajectory.length) document.querySelector('.history-filter').hidden = true;
 document.querySelectorAll('.history-filter button').forEach(button => button.addEventListener('click', () => {

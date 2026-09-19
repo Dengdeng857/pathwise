@@ -18,6 +18,7 @@ const completed = new Set(read('pathwiseTasks', []));
 const verified = new Set(read('pathwiseTaskProofs', []));
 const history = read('pathwisePlanHistory', []);
 const trajectory = read('pathwiseTrajectoryHistory', []);
+const demoMode = read('pathwiseDemoMode', false) === true;
 const fallback = {
   stages: [
     { title:'建立职业画像', why:'确认你现在的位置与想去的方向。', tasks:['补齐基本信息'] },
@@ -253,6 +254,7 @@ $('#routeProgressFill').style.width = `${percent}%`;
 $('#routeProgressMeta').textContent = weightedProgress.totalWeight ? `已获得 ${Number(weightedProgress.creditedWeight.toFixed(1))} / ${weightedProgress.totalWeight} 路径点 · ${mapFeedback.mapProgress}% 已有成果验证` : '按行动难度与投入估算';
 $('#nextMilestone').textContent = mapFeedback.next ? `下一里程碑：${mapFeedback.next.title} · ${mapFeedback.next.progress}%` : '当前路线的里程碑已经全部点亮';
 $('#mapUpdated').textContent = !hasRoute ? '从你的第一份画像开始' : plan.source === 'ai' ? 'AI 已根据最新画像生成' : '等待第一份智能规划';
+if (demoMode) $('#mapUpdated').textContent = '匿名合成示例 · 仅用于体验';
 const lastChange = history[history.length - 1];
 const lastTrajectory = trajectory[trajectory.length - 1];
 if (lastTrajectory?.narrative) {

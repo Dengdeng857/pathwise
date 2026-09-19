@@ -401,6 +401,15 @@ a { color: inherit; text-decoration: none; }
 .resume-entry span { color: var(--muted); font-size: 9px; }
 .resume-entry strong { font-size: 10px; }
 .resume-entry b { margin-left: 6px; }
+.demo-entry { display:grid; grid-template-columns:auto 1fr; align-items:center; gap:5px 12px; margin-top:15px; padding-top:14px; border-top:1px solid var(--line); }
+.demo-entry span { color:var(--muted); font-size:9px; }
+.demo-entry button { justify-self:end; border:0; background:none; color:var(--green); font-size:10px; font-weight:800; cursor:pointer; }
+.demo-entry small { grid-column:1 / -1; color:var(--faint); font-size:8px; line-height:1.5; }
+.demo-banner { display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:13px; margin-bottom:12px; padding:9px 12px; border:1px solid #b9d5c4; background:#eef8ef; color:var(--deep); }
+.demo-banner[hidden] { display:none; }
+.demo-banner span { font:8px var(--mono); letter-spacing:1px; color:var(--green); }
+.demo-banner p { margin:0; font-size:9px; }
+.demo-banner button { border:0; background:none; color:var(--deep); font-size:9px; font-weight:800; cursor:pointer; }
 .resume-review-list { display: grid; gap: 8px; margin: 18px 0; }
 .resume-review-row { display: flex; align-items: flex-start; gap: 10px; padding: 11px; border: 1px solid var(--line); background: var(--soft); cursor: pointer; }
 .resume-review-row input { width: auto; margin-top: 3px; }
@@ -477,6 +486,8 @@ body.night { --ink: #e9f2ef; --muted: #9dafaa; --faint: #829691; --paper: #111d1
 }
 
 @media (max-width: 560px) {
+  .demo-banner { grid-template-columns:1fr auto; }
+  .demo-banner p { grid-column:1 / -1; grid-row:2; }
   .side-link { font-size: 0; }
   .side-link .nav-icon { font-size: 14px; }
   .side-link .nav-count { font-size: 8px; }

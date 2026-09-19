@@ -14,6 +14,7 @@ const STORAGE = {
   taskEvents: 'pathwiseTaskEvents',
   taskProofs: 'pathwiseTaskProofs',
   planMeta: 'pathwisePlanMeta',
+  demo: 'pathwiseDemoMode',
   theme: 'pathwiseTheme'
 };
 const DEFAULT_PROFILE = {
@@ -63,6 +64,7 @@ const hasValidStoredProfile = window.PathwiseModel.isCompleteProfile(storedProfi
 // already contain a resume or progress notes and must survive a reload.
 if (isSeededDemo) Object.values(STORAGE).filter(key => key !== STORAGE.theme).forEach(key => localStorage.removeItem(key));
 let hasStoredProfile = Boolean(hasValidStoredProfile && !isSeededDemo);
+let demoMode = readJSON(STORAGE.demo, false) === true;
 
 function writeJSON(key, value) {
   try {
@@ -769,6 +771,55 @@ function persistProfile() {
   renderActivity();
 }
 
+function clearAnonymousDemoSession() {
+  if (!demoMode) return false;
+  Object.entries(STORAGE)
+    .filter(([name]) => name !== 'theme')
+    .forEach(([, key]) => localStorage.removeItem(key));
+  demoMode = false;
+  hasStoredProfile = false;
+  profile = { ...emptyProfile, updates:[], evidence:[] };
+  plan = null;
+  completedTasks = new Set();
+  verifiedTasks = new Set();
+  taskEvents = {};
+  actionCommitments = {};
+  activeTask = '';
+  document.body.classList.remove('demo-mode');
+  $('#demoBanner').hidden = true;
+  return true;
+}
+
+function startAnonymousDemo() {
+  if (hasStoredProfile) return;
+  const demoEvidence = window.PathwiseEvidence.createEvidence({
+    type:'项目成果', summary:'完成一份开源 Web 应用安全审计，记录 3 个可复核风险点',
+    content:'匿名合成示例：完成开源 Web 应用安全审计，记录 3 个风险点并形成复盘。',
+    source:{ kind:'synthetic_demo', label:'匿名合成示例' }, verification:'supported', confidence:.78,
+    supports:['软件安全基础', '代码审计'], exposesGap:['缺少真实团队协作反馈']
+  });
+  profile = {
+    ...emptyProfile,
+    stage:'本科大三下', school:'一本', major:'信息安全', target:'软件安全工程师',
+    experience:'掌握 Python，完成过一个漏洞分析练习和一个 AI 项目',
+    updates:['匿名示例已完成第一份代码审计复盘'], evidence:[demoEvidence], mood:''
+  };
+  demoMode = true;
+  writeJSON(STORAGE.demo, true);
+  persistProfile();
+  plan = { ...makeLocalPlan(profile, '匿名合成示例'), source:'demo', status:'ready' };
+  writeJSON(STORAGE.plan, plan);
+  writeJSON(STORAGE.planMeta, { lastValidAt:new Date().toISOString(), source:'demo' });
+  trackProductEvent('demo_started', { synthetic:true });
+  closeModal($('#profileModal'));
+  $('#demoBanner').hidden = false;
+  document.body.classList.add('demo-mode');
+  renderAll(plan);
+  setAIStatus('匿名示例 · 可离线体验完整路径', true);
+  companionSay('这是匿名合成路径。你可以打开行动、提交成果，再观察地图如何改道。');
+  showToast('匿名示例已载入 · 不包含真实个人信息');
+}
+
 let activeRecalculation = null;
 
 function recalculate(successMessage = '路径已经根据新信息更新。') {
@@ -1061,7 +1112,8 @@ async function confirmResumeProfile() {
     $('#resumeTargetInput')?.focus();
     return;
   }
-  const previousPlan = plan;
+  const previousPlan = demoMode ? null : plan;
+  clearAnonymousDemoSession();
   const fields = $$('.resume-review-row input:checked').map(input => input.dataset.resumeField);
   fields.forEach(field => { if (extracted[field]) profile[field] = extracted[field]; });
   profile.target = target;
@@ -1299,6 +1351,8 @@ function bindEvents() {
     materialTab.click();
     setTimeout(() => $('#evidenceFile').click(), 450);
   });
+  $('#startDemo')?.addEventListener('click', startAnonymousDemo);
+  $('#demoExit')?.addEventListener('click', () => $('.reset-path').click());
   $('#profileForm').addEventListener('submit', async event => {
     event.preventDefault();
     const formData = Object.fromEntries(new FormData(event.target));
@@ -1308,7 +1362,9 @@ function bindEvents() {
       event.target.elements[missing]?.focus();
       return;
     }
-    trackProductEvent('profile_submitted', { firstProfile: !hasStoredProfile, hasExperience: Boolean(String(formData.experience || '').trim()) });
+    const firstProfile = !hasStoredProfile || demoMode;
+    clearAnonymousDemoSession();
+    trackProductEvent('profile_submitted', { firstProfile, hasExperience: Boolean(String(formData.experience || '').trim()) });
     profile = { ...profile, ...formData };
     persistProfile();
     closeModal($('#profileModal'));
@@ -1457,6 +1513,8 @@ function init() {
   $('.outcome-modal')?.setAttribute('aria-label', '留下这一步的成果');
   $('.reset-modal')?.setAttribute('aria-label', '重新开始这条路径');
   document.body.classList.toggle('is-onboarding', !hasStoredProfile);
+  document.body.classList.toggle('demo-mode', demoMode);
+  $('#demoBanner').hidden = !demoMode;
   if (!hasStoredProfile) {
     $('#profileModalTitle').textContent = '建立你的职业画像';
     $('#companionText').textContent = '第一次使用，先告诉我你现在在哪、想去哪里。';
