@@ -1,11 +1,13 @@
 import { extractText, getDocumentProxy } from 'unpdf';
 import { json } from './_shared.js';
 
+const errorJson = (error, status = 400, code = 'invalid_request') => json({ error, code }, status);
+
 export async function onRequestPost({ request }) {
   try {
     const form = await request.formData();
     const file = form.get('file');
-    if (!(file instanceof File)) return json({ error: '缺少文件' }, 400);
+    if (!(file instanceof File)) return errorJson('缺少文件');
     const name = file.name || '材料';
     const lower = name.toLowerCase();
     let text = '';
@@ -17,10 +19,10 @@ export async function onRequestPost({ request }) {
       text = Array.isArray(result.text) ? result.text.join('\n') : String(result.text || '');
       if (!text.trim()) text = 'PDF 没有可提取文字，可能是扫描件。请上传带文字层的 PDF。';
     } else {
-      return json({ error: '当前支持 PDF、TXT、MD、JSON 和 CSV；请将图片、DOCX 或音频中的关键内容粘贴到进展框。' }, 415);
+      return errorJson('当前支持 PDF、TXT、MD、JSON 和 CSV；请将图片、DOCX 或音频中的关键内容粘贴到进展框。', 415, 'unsupported_media_type');
     }
     return json({ filename: name, type: file.type, text: text.slice(0, 30000), bytes: file.size });
   } catch (error) {
-    return json({ error: `材料解析失败：${String(error.message || error)}` }, 500);
+    return errorJson(`材料解析失败：${String(error.message || error)}`, 500, 'upstream');
   }
 }

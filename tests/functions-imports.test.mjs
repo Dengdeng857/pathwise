@@ -7,6 +7,9 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const apiDir = resolve(root, 'functions/api');
 const middlewareSource = await readFile(resolve(root, 'functions/_middleware.js'), 'utf8');
 assert.match(middlewareSource, /X-Pathwise-Request-Id/, 'Pages middleware must expose request correlation ids');
+const evidenceSource = await readFile(resolve(apiDir, 'evidence.js'), 'utf8');
+assert.match(evidenceSource, /errorJson\('缺少文件'\)/, 'cloud evidence API must return a structured missing-file error');
+assert.match(evidenceSource, /unsupported_media_type/, 'cloud evidence API must distinguish unsupported formats');
 const files = (await readdir(apiDir)).filter(name => /\.js$/.test(name));
 for (const name of files) {
   const path = resolve(apiDir, name);

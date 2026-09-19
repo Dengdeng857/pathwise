@@ -70,6 +70,11 @@ try {
   assert.equal((await malformed.json()).code, 'invalid_request');
   const emptyAction = await fetch(`${base}/api/action-guide`, { method:'POST', headers:{ 'Content-Type':'application/json' }, body:'{}' });
   assert.equal(emptyAction.status, 400, 'local and cloud action-guide validation must agree');
+  const emptyMultipart = '--pathwise-test\r\nContent-Disposition: form-data; name="note"\r\n\r\nnone\r\n--pathwise-test--\r\n';
+  const emptyEvidence = await fetch(`${base}/api/evidence`, { method:'POST', headers:{ 'Content-Type':'multipart/form-data; boundary=pathwise-test', 'Content-Length':String(Buffer.byteLength(emptyMultipart)) }, body:emptyMultipart });
+  assert.equal(emptyEvidence.status, 400, 'local and cloud evidence validation must agree');
+  assert.match(emptyEvidence.headers.get('content-type') || '', /application\/json/);
+  assert.equal((await emptyEvidence.json()).code, 'invalid_request');
   for (const endpoint of ['/api/profile-extract', '/api/evidence-insight']) {
     const emptyContent = await fetch(`${base}${endpoint}`, { method:'POST', headers:{ 'Content-Type':'application/json' }, body:'{}' });
     assert.equal(emptyContent.status, 400, `local and cloud ${endpoint} validation must agree`);

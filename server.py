@@ -404,7 +404,7 @@ class Handler(SimpleHTTPRequestHandler):
         if self.path=='/api/evidence':
             form=cgi.FieldStorage(fp=self.rfile,headers=self.headers,environ={'REQUEST_METHOD':'POST','CONTENT_TYPE':self.headers.get('Content-Type',''),'CONTENT_LENGTH':self.headers.get('Content-Length','')})
             fileitem=form['file'] if 'file' in form else None
-            if fileitem is None or not getattr(fileitem,'filename',None): self.send_error(400,'missing file'); return
+            if fileitem is None or not getattr(fileitem,'filename',None): self.send_api_error('缺少文件'); return
             raw=fileitem.file.read(); text=extract_document(fileitem.filename,raw,fileitem.type or 'application/octet-stream'); out={'filename':fileitem.filename,'type':fileitem.type,'text':text[:30000],'bytes':len(raw)}; body=json.dumps(out,ensure_ascii=False).encode(); self.send_response(200); self.send_header('Content-Type','application/json'); self.send_header('Content-Length',str(len(body))); self.end_headers(); self.wfile.write(body); return
         if self.path in ('/api/profile-extract','/api/evidence-insight','/api/trajectory-update'):
             try: payload=self.read_json()
