@@ -55,6 +55,9 @@ const validFullPlan = {
   caseReferences: [{ title: '公开案例', excerpt: ['N/A'] }]
 };
 assert.equal(PathwiseModel.validatePlanShape(validFullPlan), validFullPlan, '可选参考数据不应污染核心规划校验');
+const normalizedPlan = PathwiseModel.normalizePlanShape({ profile:'画像', summary:'判断', current_roles:[], graduation_roles:[], gaps:[], actions:[], action_guides:[], career_stages:[] });
+assert.equal(normalizedPlan.schemaVersion, 'pathwise.plan.v1');
+assert.ok(Array.isArray(normalizedPlan.currentRoles) && Array.isArray(normalizedPlan.stages));
 for (const mutate of [
   value => { value.summary = 'string'; },
   value => { value.currentRoles = []; },

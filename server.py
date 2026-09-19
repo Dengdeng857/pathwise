@@ -43,7 +43,7 @@ def local_plan(profile, reason=''):
     else: gaps_extra=[]
     actions=['拆解 10 个目标岗位 JD','把一个项目补成用户与指标案例','准备一次目标岗位项目深挖']
     action_guides=[{'title':actions[0],'why':'你需要先知道目标岗位真正要求什么，避免盲目投递。','steps':['收集 10 个近 30 天发布的 JD','标注重复出现的能力和产出','把最高频的 3 项写进简历'],'doneWhen':'完成一张岗位能力对照表','effort':2,'estimatedDays':2},{'title':actions[1],'why':'招聘方需要看到你能从问题走到结果，而不是只会做 Demo。','steps':['写清目标用户和原始问题','选一个主指标记录前后变化','补上一次取舍和失败复盘'],'doneWhen':'形成一页可讲 3 分钟的项目案例','effort':4,'estimatedDays':7},{'title':actions[2],'why':'项目深挖是验证产品思考和技术理解的最高频环节。','steps':['准备背景、目标、方案、指标四句话','为 AI 失败、成本和延迟准备答案','录音完成一次 15 分钟自问自答'],'doneWhen':'能在 3 分钟内讲清项目并回答追问','effort':3,'estimatedDays':3}]
-    return {'source':'local','status':'degraded','reason':reason,'profile':f'{stage} · {school} {major}','summary':f'{exp} · 目标：{target}'+(f' · 最近进展：{updates[-1]}' if updates else ''),'currentRoles':[{'title':f'{target}实习生','match':78,'reason':'当前背景与岗位的技术理解要求有重合。'}],'graduationRoles':[{'title':f'{target}（应用方向）','match':64,'reason':'补齐真实业务和结果证据后，毕业时可重点投递。'}],'gaps':['真实业务实习','可量化项目结果','产品指标意识']+gaps_extra,'actions':actions,'actionGuides':action_guides,'stages':[{'title':f'拿到第一段 {target} 实习','why':'获得真实用户、需求和协作经验。','tasks':['筛选有真实用户的团队','完成 10 个高质量投递','复盘每次面试反馈'],'doneWhen':'拿到 offer 或完成 10 次有效面试'},{'title':f'补齐 {target} 的能力证据','why':'把项目从 Demo 变成可验证的业务案例。','tasks':['定义一个主指标','记录迭代前后变化','写一页复盘'],'doneWhen':'有一份可讲清目标、取舍、结果的案例'},{'title':f'冲刺毕业 {target} 岗','why':'用前两阶段证据匹配毕业岗位。','tasks':['整理作品集','每周模拟一次面试','针对 JD 补行业知识'],'doneWhen':'完成目标岗位的成套投递'}]}
+    return {'schemaVersion':'pathwise.plan.v1','source':'local','status':'degraded','reason':reason,'profile':f'{stage} · {school} {major}','summary':f'{exp} · 目标：{target}'+(f' · 最近进展：{updates[-1]}' if updates else ''),'currentRoles':[{'title':f'{target}实习生','match':78,'reason':'当前背景与岗位的技术理解要求有重合。'}],'graduationRoles':[{'title':f'{target}（应用方向）','match':64,'reason':'补齐真实业务和结果证据后，毕业时可重点投递。'}],'gaps':['真实业务实习','可量化项目结果','产品指标意识']+gaps_extra,'actions':actions,'actionGuides':action_guides,'stages':[{'title':f'拿到第一段 {target} 实习','why':'获得真实用户、需求和协作经验。','tasks':['筛选有真实用户的团队','完成 10 个高质量投递','复盘每次面试反馈'],'doneWhen':'拿到 offer 或完成 10 次有效面试'},{'title':f'补齐 {target} 的能力证据','why':'把项目从 Demo 变成可验证的业务案例。','tasks':['定义一个主指标','记录迭代前后变化','写一页复盘'],'doneWhen':'有一份可讲清目标、取舍、结果的案例'},{'title':f'冲刺毕业 {target} 岗','why':'用前两阶段证据匹配毕业岗位。','tasks':['整理作品集','每周模拟一次面试','针对 JD 补行业知识'],'doneWhen':'完成目标岗位的成套投递'}]}
 
 def normalize(raw, profile):
     if not isinstance(raw,dict): return local_plan(profile,'模型返回不是 JSON 对象')
@@ -56,7 +56,7 @@ def normalize(raw, profile):
     fallback=local_plan(profile)
     for key in ('currentRoles','graduationRoles','gaps','actions','actionGuides','stages'):
         if not isinstance(raw.get(key),list) or not raw[key]: raw[key]=fallback[key]
-    raw['profile']=str(raw.get('profile') or fallback['profile']); raw['summary']=str(raw.get('summary') or fallback['summary']); raw['source']='ai'; raw['status']='ready'; return raw
+    raw['schemaVersion']='pathwise.plan.v1'; raw['profile']=str(raw.get('profile') or fallback['profile']); raw['summary']=str(raw.get('summary') or fallback['summary']); raw['source']='ai'; raw['status']='ready'; return raw
 
 def curl_chat(base, key, payload, timeout):
     config = 'url = "' + base.rstrip('/') + '/chat/completions"\n'

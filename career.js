@@ -109,7 +109,7 @@ function hasModelPlaceholder(value) {
 }
 
 function validatePlanResult(result) {
-  return window.PathwiseModel.validatePlanShape(result);
+  return window.PathwiseModel.validatePlanShape(window.PathwiseModel.normalizePlanShape(result));
 }
 
 const emptyProfile = { ...DEFAULT_PROFILE, stage: '', school: '', major: '', target: '', experience: '', updates: [], evidence: [] };
@@ -130,7 +130,7 @@ let plan = readJSON(STORAGE.plan, null);
 if (plan) {
   // Never render a plan cached by an older build if it contains schema
   // placeholders (for example, the literal value "string").
-  try { validatePlanResult(plan); } catch (_) {
+  try { plan = validatePlanResult(plan); } catch (_) {
     plan = null;
     localStorage.removeItem(STORAGE.plan);
     localStorage.removeItem(STORAGE.tasks);
@@ -171,6 +171,7 @@ function makeLocalPlan(sourceProfile = profile, reason = '') {
   const proof = security ? '代码审计、漏洞分析或安全工具成果' : '可量化项目结果';
 
   return {
+    schemaVersion:'pathwise.plan.v1',
     source: 'local',
     status: 'degraded',
     reason,
@@ -395,7 +396,7 @@ async function performStreamingPlan(body) {
       if (!candidate) continue;
       try {
         const value = parseCandidate(candidate);
-        if (value && (value.profile || value.currentRoles || value.stages)) return validatePlanResult(value);
+        if (value && (value.profile || value.currentRoles || value.stages || value.current_roles || value.career_stages)) return validatePlanResult(value);
       } catch (_) {}
     }
     console.warn('Pathwise planner response could not be parsed', { length:cleaned.length, finishReason });
@@ -778,8 +779,7 @@ async function performRecalculation(successMessage) {
   const previousPlan = plan;
   startProgress();
   try {
-    const result = await requestStreamingPlan(profile);
-    validatePlanResult(result);
+    const result = validatePlanResult(await requestStreamingPlan(profile));
     plan = { ...result, source: result.source || 'ai' };
     recordPlanVersion(previousPlan, plan, '这次更新', plan.source);
     writeJSON(STORAGE.plan, plan);

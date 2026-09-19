@@ -30,6 +30,7 @@ assert.match(careerJs, /chunk\?\.error[\s\S]{0,180}code:'upstream'/, 'SSE error 
 assert.match(careerHtml, /class="role-evidence"/g, 'role cards must expose their evidence basis');
 assert.match(careerJs, /PathwiseEvidence\.roleTrace/, 'role decisions must resolve to deterministic evidence traces');
 assert.match(careerJs, /evidenceId:evidence\?\.id \|\| evidence\?\.addedAt/, 'trajectory must persist the stable evidence id');
+assert.match(careerJs, /PathwiseModel\.normalizePlanShape/, 'streamed and cached plans must share a versioned normalization contract');
 assert.match(careerJs, /lastValidAt/, 'the UI must retain the last valid plan timestamp');
 assert.ok(labHtml.indexOf('path-model.js') < labHtml.indexOf('lab.js'), 'shared model must load before direction comparison');
 assert.ok(mapHtml.indexOf('path-model.js') < mapHtml.indexOf('map.js'), 'shared model must load before the map');
