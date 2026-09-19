@@ -21,4 +21,14 @@ assert.equal(verified.confidence, .92);
 assert.deepEqual(verified.supports, ['性能优化']);
 assert.equal(model.verificationLabel(verified), '已验证成果');
 
+const trace = model.roleTrace({ title:'后端工程师', reason:'需要性能优化能力' }, [verified], { target:'后端工程师' });
+assert.equal(trace.evidenceId, verified.id);
+assert.equal(trace.claim, '性能优化');
+assert.equal(trace.verificationLabel, '已验证成果');
+assert.equal(trace.sourceLabel, '行动成果');
+const profileTrace = model.roleTrace({ title:'产品经理' }, [], { stage:'本科大三', major:'计算机', target:'产品经理' });
+assert.equal(profileTrace.evidenceId, 'profile');
+assert.equal(profileTrace.verification, 'self_reported');
+assert.match(profileTrace.claim, /本科大三/);
+
 console.log('evidence schema model tests passed');

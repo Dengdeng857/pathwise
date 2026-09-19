@@ -584,9 +584,11 @@ function renderRoles(currentPlan) {
     const match = Math.max(0, Math.min(100, Number(role.match || 0)));
     $('h3', card).textContent = role.title || '待生成岗位';
     $('p', card).textContent = compact(role.reason || '补充画像后生成岗位判断。', 112);
+    const trace = window.PathwiseEvidence.roleTrace(role, profile.evidence, profile);
+    $('.role-evidence', card).textContent = `依据 · ${trace.verificationLabel} · ${compact(trace.claim, 34)}`;
     $('.match-value', card).textContent = match || '--';
     $('.match-track i', card).style.width = `${match}%`;
-    card.dataset.role = JSON.stringify(role);
+    card.dataset.role = JSON.stringify({ ...role, evidenceTrace:trace });
   });
   const gaps = unique((currentPlan.gaps || []).map(item => compact(item, 55))).slice(0, 4);
   $('#gapList').innerHTML = gaps.length ? gaps.map(item => `<i>${escapeHtml(item)}</i>`).join('') : '<i>暂无有效差距信息</i>';
@@ -1151,11 +1153,13 @@ function bindEvents() {
   $$('.open-guide').forEach(button => button.addEventListener('click', () => {
     const card = button.closest('.role-card');
     const role = JSON.parse(card.dataset.role || '{}');
+    const trace = role.evidenceTrace || window.PathwiseEvidence.roleTrace(role, profile.evidence, profile);
     const gaps = plan?.gaps || [];
+    const traceDate = trace.capturedAt ? new Date(trace.capturedAt).toLocaleDateString('zh-CN') : '画像建立时';
     openDrawer({
       kicker: ['ROLE / NOW', 'ROLE / GRADUATION', 'ROLE / STRETCH'][Number(button.dataset.roleIndex)] || 'ROLE GUIDE',
       title: role.title || '岗位建议', intro: role.reason || '',
-      content: `<div class="guide-detail"><h3>判断依据</h3><ol>${gaps.slice(0, 3).map((gap, index) => `<li><b>0${index + 1}</b><span>${escapeHtml(gap)}</span></li>`).join('')}</ol></div><div class="guide-evidence"><small>下一步</small><p>优先完成行动路径中的第一项，并用成果更新这张岗位地图。</p></div>`
+      content: `<div class="role-proof"><small>岗位判断依据</small><strong>${escapeHtml(trace.claim)}</strong><p>${escapeHtml(trace.verificationLabel)} · ${escapeHtml(trace.sourceLabel)} · 置信度 ${Math.round(Number(trace.confidence || 0) * 100)}%</p><code>${escapeHtml(trace.evidenceId)} · ${escapeHtml(traceDate)}</code></div><div class="guide-detail"><h3>仍需补齐</h3><ol>${gaps.slice(0, 3).map((gap, index) => `<li><b>0${index + 1}</b><span>${escapeHtml(gap)}</span></li>`).join('')}</ol></div><div class="guide-evidence"><small>下一步</small><p>优先完成行动路径中的第一项，并用成果更新这张岗位地图。</p></div>`
     });
   }));
 

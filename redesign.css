@@ -181,6 +181,12 @@ a { color: inherit; text-decoration: none; }
 .role-top b { color: var(--ink); font: 500 11px var(--mono); }
 .role-card h3 { margin: 27px 0 9px; font-size: 16px; line-height: 1.35; }
 .role-card p { min-height: 50px; margin: 0; color: var(--muted); font-size: 10px; line-height: 1.7; }
+.role-evidence { display: block; min-height: 30px; margin: 9px 0 3px; color: #39745f; font-size: 9px; line-height: 1.55; }
+.role-proof { margin: 0 0 16px; padding: 15px; border-left: 3px solid var(--green); background: var(--soft); }
+.role-proof small, .role-proof strong, .role-proof p, .role-proof code { display: block; }
+.role-proof small { color: var(--muted); font-size: 9px; }
+.role-proof strong { margin: 7px 0; font-size: 14px; line-height: 1.5; }
+.role-proof p, .role-proof code { margin: 4px 0 0; color: var(--muted); font-size: 9px; line-height: 1.5; }
 .match-track { height: 5px; margin: 22px 0 19px; overflow: hidden; background: #edf1ef; }
 .match-track i { display: block; width: 0; height: 100%; background: var(--green); transition: width .7s cubic-bezier(.2,.8,.2,1); }
 .graduation .match-track i { background: var(--yellow); }

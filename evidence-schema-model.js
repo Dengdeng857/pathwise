@@ -67,5 +67,43 @@
     return value === 'verified' ? '已验证成果' : value === 'supported' ? '有材料支持' : '用户自述';
   }
 
-  return { VERSION, createEvidence, isUsable, normalizeEvidence, verificationLabel };
+  function roleTrace(role = {}, evidence = [], profile = {}) {
+    const roleText = `${role.title || ''} ${role.reason || ''}`.toLowerCase();
+    const candidates = (Array.isArray(evidence) ? evidence : [])
+      .map(normalizeEvidence)
+      .filter(isUsable)
+      .map((item, index) => {
+        const claims = list([...(item.supports || []), ...(item.insight?.proves || []), item.summary], 8);
+        const terms = roleText.match(/[\u4e00-\u9fff]{2,}|[a-z0-9+#.-]{2,}/g) || [];
+        const searchable = `${claims.join(' ')} ${(item.exposesGap || []).join(' ')} ${item.type}`.toLowerCase();
+        const relevance = terms.reduce((score, term) => score + (searchable.includes(term) ? 1 : 0), 0);
+        return { item, claims, score:relevance * 10 + item.confidence * 3 + index / 1000 };
+      })
+      .sort((a, b) => b.score - a.score);
+    const selected = candidates[0];
+    if (selected) {
+      const item = selected.item;
+      return {
+        evidenceId:item.id,
+        claim:selected.claims[0] || `${item.type || '材料'}已进入岗位判断`,
+        sourceLabel:item.type || '职业材料',
+        verification:item.verification,
+        verificationLabel:verificationLabel(item),
+        confidence:item.confidence,
+        capturedAt:item.capturedAt
+      };
+    }
+    const facts = list([profile.stage, profile.major, profile.target], 3);
+    return {
+      evidenceId:'profile',
+      claim:facts.length ? facts.join(' · ') : '尚未提供可验证材料',
+      sourceLabel:'用户确认的职业画像',
+      verification:'self_reported',
+      verificationLabel:'用户自述',
+      confidence:.45,
+      capturedAt:''
+    };
+  }
+
+  return { VERSION, createEvidence, isUsable, normalizeEvidence, roleTrace, verificationLabel };
 });
