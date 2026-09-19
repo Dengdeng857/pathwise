@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import json, os, re, io, cgi, base64, mimetypes, subprocess, unicodedata
+import json, os, re, io, cgi, base64, mimetypes, subprocess, unicodedata, secrets
 from http.server import HTTPServer, ThreadingHTTPServer, SimpleHTTPRequestHandler
 from urllib.request import Request, urlopen
 
@@ -376,8 +376,12 @@ class Handler(SimpleHTTPRequestHandler):
         except (ValueError,UnicodeDecodeError): raise ValueError('invalid JSON body')
 
     def end_headers(self):
+        incoming_id=self.headers.get('X-Pathwise-Request-Id','').strip()
+        if not re.fullmatch(r'[A-Za-z0-9_-]{8,80}',incoming_id): incoming_id='pw_srv_'+secrets.token_hex(8)
         self.send_header('Access-Control-Allow-Origin','*')
         self.send_header('Access-Control-Allow-Headers','Content-Type, Authorization, X-Pathwise-Request-Id')
+        self.send_header('Access-Control-Expose-Headers','X-Pathwise-Request-Id')
+        self.send_header('X-Pathwise-Request-Id',incoming_id)
         self.send_header('Access-Control-Allow-Methods','GET, POST, OPTIONS')
         self.send_header('Cache-Control','no-store')
         super().end_headers()

@@ -23,6 +23,7 @@ assert.match(careerHtml, /id=["']outcomeQuality["']/, 'outcome modal must explai
 assert.match(careerHtml, /id=["']outcomeSaveProgress["']/, 'weak outcomes must remain saveable as progress');
 assert.match(careerHtml, /id=["']planRetry["']/, 'failed planning must expose a safe retry action');
 assert.match(careerJs, /X-Pathwise-Request-Id/, 'API calls must carry a diagnosable request id');
+assert.match(careerJs, /response\.headers\.get\('X-Pathwise-Request-Id'\)/, 'API errors must preserve the server correlation id');
 assert.match(careerJs, /lastValidAt/, 'the UI must retain the last valid plan timestamp');
 assert.ok(labHtml.indexOf('path-model.js') < labHtml.indexOf('lab.js'), 'shared model must load before direction comparison');
 assert.ok(mapHtml.indexOf('path-model.js') < mapHtml.indexOf('map.js'), 'shared model must load before the map');
@@ -42,7 +43,7 @@ assert.match(mapHtml, /class="route-terrain"/, 'map must preserve chapter terrai
 assert.match(mapJs, /destinationFork/, 'career alternatives must share one readable fork point');
 assert.match(mapJs, /verificationLabel/, 'map reroutes must expose the evidence verification level');
 assert.match(mapJs, /curvePath\(/, 'career routes must render as a map-like curved path');
-assert.match(careerJs, /class="guide-step"/, 'action guide must expose executable micro-steps');
+assert.match(careerJs, /class="guide-step/, 'action guide must expose executable micro-steps');
 assert.match(careerJs, /aria-pressed/, 'micro-step controls must expose accessible state');
 assert.match(careerJs, /提交成果后才会缩短/, 'micro-step feedback must preserve evidence-based progress rules');
 

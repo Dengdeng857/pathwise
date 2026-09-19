@@ -254,17 +254,20 @@ function finishProgress(message = '路径已更新') {
 async function requestJSON(path, options = {}, timeout = 180000) {
   const controller = new AbortController();
   const requestId = makeRequestId();
+  let correlationId = requestId;
   const timer = setTimeout(() => controller.abort(), timeout);
   try {
     const headers = new Headers(options.headers || {});
     headers.set('X-Pathwise-Request-Id', requestId);
     const response = await fetch(api(path), { ...options, headers, signal: controller.signal });
+    const responseRequestId = response.headers.get('X-Pathwise-Request-Id') || requestId;
+    correlationId = responseRequestId;
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new APIRequestError(data.error || `HTTP ${response.status}`, { code:classifyAPIError({ message:data.error }, response.status), requestId, status:response.status });
+    if (!response.ok) throw new APIRequestError(data.error || `HTTP ${response.status}`, { code:classifyAPIError({ message:data.error }, response.status), requestId:responseRequestId, status:response.status });
     return data;
   } catch (error) {
     if (error instanceof APIRequestError) throw error;
-    throw new APIRequestError(error?.name === 'AbortError' ? `请求超过 ${Math.round(timeout / 1000)} 秒` : String(error?.message || error), { code:classifyAPIError(error), requestId });
+    throw new APIRequestError(error?.name === 'AbortError' ? `请求超过 ${Math.round(timeout / 1000)} 秒` : String(error?.message || error), { code:classifyAPIError(error), requestId:correlationId });
   } finally {
     clearTimeout(timer);
   }
@@ -273,12 +276,15 @@ async function requestJSON(path, options = {}, timeout = 180000) {
 async function requestStreamingPlan(body) {
   const controller = new AbortController();
   const requestId = makeRequestId();
+  let correlationId = requestId;
   const timer = setTimeout(() => controller.abort(), 180000);
   try {
     const response = await fetch(api('/api/plan'), { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream', 'X-Pathwise-Request-Id':requestId }, body: JSON.stringify(body), signal: controller.signal });
+    const responseRequestId = response.headers.get('X-Pathwise-Request-Id') || requestId;
+    correlationId = responseRequestId;
     if (!response.ok || !response.body) {
       const payload = await response.json().catch(() => ({}));
-      throw new APIRequestError(payload.error || `HTTP ${response.status}`, { code:classifyAPIError({ message:payload.error }, response.status), requestId, status:response.status });
+      throw new APIRequestError(payload.error || `HTTP ${response.status}`, { code:classifyAPIError({ message:payload.error }, response.status), requestId:responseRequestId, status:response.status });
     }
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
@@ -332,7 +338,7 @@ async function requestStreamingPlan(body) {
         }
       }
     }
-    if (!content.trim()) throw new APIRequestError('流式规划没有返回内容', { code:'invalid_response', requestId });
+    if (!content.trim()) throw new APIRequestError('流式规划没有返回内容', { code:'invalid_response', requestId:correlationId });
     // Gateways may return a JSON object followed by usage metadata or a second
     // JSON frame. Keep only the first complete object for the planner.
     const cleaned = content.replace(/^```(?:json)?\s*|\s*```$/g, '').trim();
@@ -375,10 +381,10 @@ async function requestStreamingPlan(body) {
       } catch (_) {}
     }
     console.warn('Pathwise planner response could not be parsed', { length:cleaned.length, finishReason });
-    throw new APIRequestError(finishReason === 'length' ? '模型输出达到长度上限，规划 JSON 未完整返回' : '流式规划返回内容无法解析', { code:'invalid_response', requestId });
+    throw new APIRequestError(finishReason === 'length' ? '模型输出达到长度上限，规划 JSON 未完整返回' : '流式规划返回内容无法解析', { code:'invalid_response', requestId:correlationId });
   } catch (error) {
     if (error instanceof APIRequestError) throw error;
-    throw new APIRequestError(error?.name === 'AbortError' ? '规划请求超过 180 秒' : String(error?.message || error), { code:classifyAPIError(error), requestId });
+    throw new APIRequestError(error?.name === 'AbortError' ? '规划请求超过 180 秒' : String(error?.message || error), { code:classifyAPIError(error), requestId:correlationId });
   } finally { clearTimeout(timer); }
 }
 

@@ -1,9 +1,12 @@
 import assert from 'node:assert/strict';
 import { access, readFile, readdir } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const root = resolve(new URL('..', import.meta.url).pathname);
+const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const apiDir = resolve(root, 'functions/api');
+const middlewareSource = await readFile(resolve(root, 'functions/_middleware.js'), 'utf8');
+assert.match(middlewareSource, /X-Pathwise-Request-Id/, 'Pages middleware must expose request correlation ids');
 const files = (await readdir(apiDir)).filter(name => /\.js$/.test(name));
 for (const name of files) {
   const path = resolve(apiDir, name);
