@@ -233,6 +233,20 @@ function setAIStatus(text, ready) {
   $('.top-status').classList.toggle('offline', !ready);
 }
 
+function restorePlanRecoveryState() {
+  const meta = readJSON(STORAGE.planMeta, {});
+  if (!hasStoredProfile || !meta.lastError) return;
+  const validAt = meta.lastValidAt ? new Date(meta.lastValidAt).toLocaleString('zh-CN', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' }) : '当前浏览器';
+  const attemptAt = meta.lastAttemptAt ? new Date(meta.lastAttemptAt).toLocaleString('zh-CN', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' }) : '最近一次';
+  $('#planDeltaTitle').textContent = meta.source === 'local' ? '当前使用本地可用路径' : '暂时保留上次有效路径';
+  $('#planDeltaText').textContent = `${attemptAt} 的智能规划没有完成（${diagnosticLabel(meta.lastError)}）。当前展示 ${validAt} 保存的路径，你可以继续行动或稍后重试。`;
+  $('#planDiagnostic').textContent = `诊断 ${meta.lastError.code || 'unknown'} · 请求 ${meta.lastError.requestId || 'local'} · 已保留本地状态`;
+  $('#planDelta').hidden = false;
+  $('#planDiagnostic').hidden = false;
+  $('#planRetry').hidden = false;
+  setAIStatus(meta.source === 'local' ? '当前使用本地规划 · 可随时重试' : '暂时保留上次路径 · 可随时重试', false);
+}
+
 function startProgress() {
   clearInterval(progressTimer);
   const bar = $('#aiProgress');
@@ -896,6 +910,14 @@ async function performRecalculation(successMessage) {
     plan = keptPrevious ? { ...previousPlan, status: 'stale', staleReason: reason } : makeLocalPlan(profile, reason);
     recordPlanVersion(previousPlan, plan, '这次更新', 'local');
     writeJSON(STORAGE.plan, plan);
+    const previousMeta = readJSON(STORAGE.planMeta, {});
+    writeJSON(STORAGE.planMeta, {
+      ...previousMeta,
+      ...(keptPrevious ? {} : { lastValidAt:new Date().toISOString() }),
+      source: keptPrevious ? (previousMeta.source || 'ai') : 'local',
+      lastAttemptAt: new Date().toISOString(),
+      lastError: { code:error.code || 'unknown', requestId:error.requestId || 'local', message:compact(reason, 120) }
+    });
     renderAll(plan);
     if (keptPrevious) {
       $('#planDeltaTitle').textContent = '暂时保留上次有效路径';
@@ -910,7 +932,7 @@ async function performRecalculation(successMessage) {
     showToast(keptPrevious ? '智能规划未完成，已保留上次有效路径' : '新信息已保存，当前路径保持可用');
     companionSay(keptPrevious ? '这次响应没有通过校验，我先保护好上一版路径，稍后可以重试。' : '智能规划暂时没有完成响应，但你的信息没有丢失，可以稍后再次更新。');
     setAIStatus(keptPrevious ? '暂时保留上次路径 · 稍后重试' : '路径已更新 · 使用本地规划', false);
-    $('#planDiagnostic').textContent = `诊断 ${error.code || 'unknown'} · 请求 ${error.requestId || 'local'}`;
+    $('#planDiagnostic').textContent = `诊断 ${error.code || 'unknown'} · 请求 ${error.requestId || 'local'} · 已保留本地状态`;
     $('#planDiagnostic').hidden = false;
     $('#planRetry').hidden = false;
     console.warn('Pathwise plan request failed:', error);
@@ -1561,6 +1583,7 @@ function init() {
   setWorkspaceView(location.hash === '#route' ? 'route' : location.hash === '#evidence' ? 'evidence' : 'overview');
   if (hasStoredProfile) persistProfile();
   renderAll(plan || makeLocalPlan());
+  restorePlanRecoveryState();
   checkHealth();
   if (!hasStoredProfile) {
     setTimeout(() => {
