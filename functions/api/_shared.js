@@ -4,6 +4,22 @@ export function json(data, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: jsonHeaders });
 }
 
+export function classifyServiceError(error, fallbackStatus = 502) {
+  const message = String(error?.message || error || '服务暂时不可用');
+  if (/Key 未配置|未配置 API Key/i.test(message)) return { code:'not_configured', status:503, message };
+  if (/超时|timeout|timed out|AbortError/i.test(message)) return { code:'timeout', status:504, message };
+  if (/JSON|字段|占位符|列表为空|响应为空|格式无法识别|不完整|无效/i.test(message)) {
+    return { code:'invalid_response', status:502, message };
+  }
+  if (/模型服务返回|upstream|gateway/i.test(message)) return { code:'upstream', status:502, message };
+  return { code:fallbackStatus >= 500 ? 'upstream' : 'request', status:fallbackStatus, message };
+}
+
+export function serviceError(error, fallbackStatus = 502, explicitCode = '') {
+  const classified = classifyServiceError(error, fallbackStatus);
+  return json({ error:classified.message, code:explicitCode || classified.code }, explicitCode ? fallbackStatus : classified.status);
+}
+
 export function modelConfig(env) {
   const explicitBase = String(env.AI_BASE_URL || '').replace(/\/$/, '');
   const provider = explicitBase.includes('api.openai.com')

@@ -1,11 +1,11 @@
-import { chat, compactProfile, hasModelPlaceholder, json, parseModelJson } from './_shared.js';
+import { chat, compactProfile, hasModelPlaceholder, json, parseModelJson, serviceError } from './_shared.js';
 
 export async function onRequestPost({ request, env }) {
   try {
     let payload;
-    try { payload = await request.json(); } catch (_) { return json({ error: '请求 JSON 格式无效' }, 400); }
+    try { payload = await request.json(); } catch (_) { return serviceError('请求 JSON 格式无效', 400, 'invalid_request'); }
     const content = String(payload.content || '').slice(0, 10000);
-    if (!content.trim()) return json({ error: '缺少材料内容' }, 400);
+    if (!content.trim()) return serviceError('缺少材料内容', 400, 'invalid_request');
     const profile = compactProfile(payload.profile || {});
     const schema = '{"proves":["材料明确证明的事实"],"gaps":["仍缺少的证据"],"next":"下一步行动","resumeLine":"谨慎的简历表达"}';
     const prompt = `你是职业证据分析器。根据用户画像和一份材料，提炼这份材料对求职真正有用的证据。不要复述原文，不要夸大，不要编造。只返回 JSON，结构为：${schema}。proves 最多3条，gaps 最多3条，next 是一个具体下一步，resumeLine 是一条可放进简历的谨慎表达。\n用户画像：${JSON.stringify(profile)}\n材料：${content}`;
@@ -20,6 +20,6 @@ export async function onRequestPost({ request, env }) {
       source: 'ai'
     });
   } catch (error) {
-    return json({ error: String(error.message || error) }, 502);
+    return serviceError(error);
   }
 }

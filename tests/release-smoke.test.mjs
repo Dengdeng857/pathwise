@@ -67,6 +67,7 @@ try {
   const malformed = await fetch(`${base}/api/trajectory-update`, { method:'POST', headers:{ 'Content-Type':'application/json' }, body:'{' });
   assert.equal(malformed.status, 400);
   assert.match(malformed.headers.get('content-type') || '', /application\/json/);
+  assert.equal((await malformed.json()).code, 'invalid_request');
   const emptyAction = await fetch(`${base}/api/action-guide`, { method:'POST', headers:{ 'Content-Type':'application/json' }, body:'{}' });
   assert.equal(emptyAction.status, 400, 'local and cloud action-guide validation must agree');
   for (const endpoint of ['/api/profile-extract', '/api/evidence-insight']) {

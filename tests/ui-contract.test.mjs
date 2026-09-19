@@ -24,6 +24,9 @@ assert.match(careerHtml, /id=["']outcomeSaveProgress["']/, 'weak outcomes must r
 assert.match(careerHtml, /id=["']planRetry["']/, 'failed planning must expose a safe retry action');
 assert.match(careerJs, /X-Pathwise-Request-Id/, 'API calls must carry a diagnosable request id');
 assert.match(careerJs, /response\.headers\.get\('X-Pathwise-Request-Id'\)/, 'API errors must preserve the server correlation id');
+assert.match(careerJs, /activePlanRequest\?\.signature === signature/, 'concurrent identical planning requests must share one upstream call');
+assert.match(careerJs, /activeRecalculation\?\.signature === signature/, 'concurrent identical recalculations must persist only once');
+assert.match(careerJs, /chunk\?\.error[\s\S]{0,180}code:'upstream'/, 'SSE error frames must remain distinguishable from truncated JSON');
 assert.match(careerJs, /lastValidAt/, 'the UI must retain the last valid plan timestamp');
 assert.ok(labHtml.indexOf('path-model.js') < labHtml.indexOf('lab.js'), 'shared model must load before direction comparison');
 assert.ok(mapHtml.indexOf('path-model.js') < mapHtml.indexOf('map.js'), 'shared model must load before the map');

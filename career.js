@@ -263,7 +263,7 @@ async function requestJSON(path, options = {}, timeout = 180000) {
     const responseRequestId = response.headers.get('X-Pathwise-Request-Id') || requestId;
     correlationId = responseRequestId;
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new APIRequestError(data.error || `HTTP ${response.status}`, { code:classifyAPIError({ message:data.error }, response.status), requestId:responseRequestId, status:response.status });
+    if (!response.ok) throw new APIRequestError(data.error || `HTTP ${response.status}`, { code:data.code || classifyAPIError({ message:data.error }, response.status), requestId:responseRequestId, status:response.status });
     return data;
   } catch (error) {
     if (error instanceof APIRequestError) throw error;
@@ -273,7 +273,19 @@ async function requestJSON(path, options = {}, timeout = 180000) {
   }
 }
 
-async function requestStreamingPlan(body) {
+let activePlanRequest = null;
+
+function requestStreamingPlan(body) {
+  const signature = JSON.stringify(body);
+  if (activePlanRequest?.signature === signature) return activePlanRequest.promise;
+  const promise = performStreamingPlan(body).finally(() => {
+    if (activePlanRequest?.promise === promise) activePlanRequest = null;
+  });
+  activePlanRequest = { signature, promise };
+  return promise;
+}
+
+async function performStreamingPlan(body) {
   const controller = new AbortController();
   const requestId = makeRequestId();
   let correlationId = requestId;
@@ -284,11 +296,11 @@ async function requestStreamingPlan(body) {
     correlationId = responseRequestId;
     if (!response.ok || !response.body) {
       const payload = await response.json().catch(() => ({}));
-      throw new APIRequestError(payload.error || `HTTP ${response.status}`, { code:classifyAPIError({ message:payload.error }, response.status), requestId:responseRequestId, status:response.status });
+      throw new APIRequestError(payload.error || `HTTP ${response.status}`, { code:payload.code || classifyAPIError({ message:payload.error }, response.status), requestId:responseRequestId, status:response.status });
     }
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
-    let buffer = '', raw = '', content = '', finishReason = '';
+    let buffer = '', raw = '', content = '', finishReason = '', streamError = '';
     const appendChunk = (chunk) => {
       // Some OpenAI-compatible gateways emit the planner object itself as an
       // SSE data frame instead of wrapping it in choices[].
@@ -319,6 +331,7 @@ async function requestStreamingPlan(body) {
         if (!trimmed.startsWith('data:') || trimmed === 'data: [DONE]') continue;
         try {
           const chunk = JSON.parse(trimmed.slice(5).trim());
+          if (chunk?.error) { streamError = String(chunk.error); continue; }
           appendChunk(chunk);
         } catch (_) {}
       }
@@ -327,8 +340,13 @@ async function requestStreamingPlan(body) {
     // process that buffered frame before deciding the response is empty.
     const finalLine = buffer.trim();
     if (finalLine.startsWith('data:') && finalLine !== 'data: [DONE]') {
-      try { appendChunk(JSON.parse(finalLine.slice(5).trim())); } catch (_) {}
+      try {
+        const chunk = JSON.parse(finalLine.slice(5).trim());
+        if (chunk?.error) streamError = String(chunk.error);
+        else appendChunk(chunk);
+      } catch (_) {}
     }
+    if (streamError) throw new APIRequestError(streamError, { code:'upstream', requestId:correlationId });
     if (!content.trim()) {
       try { appendChunk(JSON.parse(raw)); } catch (_) {
         for (const line of raw.split(/\r?\n/)) {
@@ -742,7 +760,19 @@ function persistProfile() {
   renderActivity();
 }
 
-async function recalculate(successMessage = '路径已经根据新信息更新。') {
+let activeRecalculation = null;
+
+function recalculate(successMessage = '路径已经根据新信息更新。') {
+  const signature = JSON.stringify(profile);
+  if (activeRecalculation?.signature === signature) return activeRecalculation.promise;
+  const promise = performRecalculation(successMessage).finally(() => {
+    if (activeRecalculation?.promise === promise) activeRecalculation = null;
+  });
+  activeRecalculation = { signature, promise };
+  return promise;
+}
+
+async function performRecalculation(successMessage) {
   const previousPlan = plan;
   startProgress();
   try {

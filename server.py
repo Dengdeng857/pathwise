@@ -368,6 +368,9 @@ class Handler(SimpleHTTPRequestHandler):
         body=json.dumps(payload,ensure_ascii=False).encode('utf-8')
         self.send_response(status); self.send_header('Content-Type','application/json; charset=utf-8'); self.send_header('Content-Length',str(len(body))); self.end_headers(); self.wfile.write(body)
 
+    def send_api_error(self, message, status=400, code='invalid_request'):
+        self.send_json({'error':message,'code':code},status)
+
     def read_json(self, max_bytes=2_000_000):
         try: length=int(self.headers.get('Content-Length',0))
         except (TypeError,ValueError): raise ValueError('invalid Content-Length')
@@ -403,14 +406,14 @@ class Handler(SimpleHTTPRequestHandler):
             raw=fileitem.file.read(); text=extract_document(fileitem.filename,raw,fileitem.type or 'application/octet-stream'); out={'filename':fileitem.filename,'type':fileitem.type,'text':text[:30000],'bytes':len(raw)}; body=json.dumps(out,ensure_ascii=False).encode(); self.send_response(200); self.send_header('Content-Type','application/json'); self.send_header('Content-Length',str(len(body))); self.end_headers(); self.wfile.write(body); return
         if self.path in ('/api/profile-extract','/api/evidence-insight','/api/trajectory-update'):
             try: payload=self.read_json()
-            except ValueError as error: self.send_json({'error':str(error)},400); return
-            if self.path in ('/api/profile-extract','/api/evidence-insight') and not str(payload.get('content') or '').strip(): self.send_json({'error':'缺少材料内容'},400); return
+            except ValueError as error: self.send_api_error(str(error)); return
+            if self.path in ('/api/profile-extract','/api/evidence-insight') and not str(payload.get('content') or '').strip(): self.send_api_error('缺少材料内容'); return
             result = local_profile_extract(payload.get('content',''), payload.get('profile')) if self.path.endswith('profile-extract') else (local_trajectory_update(payload) if self.path.endswith('trajectory-update') else local_evidence_insight(payload.get('content',''), payload.get('profile')))
             self.send_json(result); return
         if self.path not in ('/api/plan','/api/action-guide'): self.send_error(404); return
         try: payload=self.read_json()
-        except ValueError as error: self.send_json({'error':str(error)},400); return
-        if self.path=='/api/action-guide' and not str(payload.get('action') or '').strip(): self.send_json({'error':'缺少行动项'},400); return
+        except ValueError as error: self.send_api_error(str(error)); return
+        if self.path=='/api/action-guide' and not str(payload.get('action') or '').strip(): self.send_api_error('缺少行动项'); return
         result=make_plan(payload) if self.path=='/api/plan' else make_action_guide(payload)
         self.send_json(result)
     def log_message(self,*args): pass

@@ -1,9 +1,9 @@
-import { chat, compactProfile, json, normalizePlanContract, parseModelJson, retrieveCases, upstreamChat, validatePlan } from './_shared.js';
+import { chat, compactProfile, json, normalizePlanContract, parseModelJson, retrieveCases, serviceError, upstreamChat, validatePlan } from './_shared.js';
 
 export async function onRequestPost({ request, env }) {
   try {
     let payload;
-    try { payload = await request.json(); } catch (_) { return json({ error: '请求 JSON 格式无效' }, 400); }
+    try { payload = await request.json(); } catch (_) { return serviceError('请求 JSON 格式无效', 400, 'invalid_request'); }
     const profile = compactProfile(payload || {});
     const cases = await retrieveCases(env, profile, 5);
     const schema = '{"profile":"用用户事实写一句画像","summary":"不超过80字的判断","currentRoles":[{"title":"现实可投岗位","match":0,"reason":"基于证据的原因"}],"graduationRoles":[{"title":"毕业可达岗位","match":0,"reason":"需要补齐什么"}],"gaps":["具体缺口"],"actions":["可执行行动"],"actionGuides":[{"title":"必须与 actions 完全一致","why":"行动价值","steps":["具体步骤"],"doneWhen":"完成标准","effort":3,"estimatedDays":7}],"stages":[{"title":"阶段名称","why":"阶段目的","tasks":["阶段任务"],"doneWhen":"阶段完成标准"}]}';
@@ -41,6 +41,6 @@ export async function onRequestPost({ request, env }) {
     result.caseReferences = cases;
     return json(result);
   } catch (error) {
-    return json({ error: String(error.message || error) }, 502);
+    return serviceError(error);
   }
 }
