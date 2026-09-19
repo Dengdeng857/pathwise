@@ -31,6 +31,8 @@ assert.match(careerHtml, /class="role-evidence"/g, 'role cards must expose their
 assert.match(careerJs, /PathwiseEvidence\.roleTrace/, 'role decisions must resolve to deterministic evidence traces');
 assert.match(careerJs, /evidenceId:evidence\?\.id \|\| evidence\?\.addedAt/, 'trajectory must persist the stable evidence id');
 assert.match(careerJs, /PathwiseModel\.normalizePlanShape/, 'streamed and cached plans must share a versioned normalization contract');
+assert.match(careerJs, /activeEvidenceTransaction\?\.signature === signature/, 'identical evidence submissions must share one transaction');
+assert.match(careerJs, /这份材料已经在证据链中/, 'persisted duplicate evidence must be rejected before replanning');
 assert.match(careerJs, /lastValidAt/, 'the UI must retain the last valid plan timestamp');
 assert.ok(labHtml.indexOf('path-model.js') < labHtml.indexOf('lab.js'), 'shared model must load before direction comparison');
 assert.ok(mapHtml.indexOf('path-model.js') < mapHtml.indexOf('map.js'), 'shared model must load before the map');

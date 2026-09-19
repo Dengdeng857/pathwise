@@ -951,9 +951,47 @@ async function addUpdate(text) {
   await recalculate('新进展已经进入路径，我重新排好了后续优先级。');
 }
 
-async function addEvidence(content, meta = {}) {
+let activeEvidenceTransaction = null;
+
+function evidenceSignature(content, meta = {}) {
+  const type = String(meta.type || $('#evidenceType').value || '材料').trim();
+  const filename = String(meta.filename || '').trim();
+  const defaultSource = filename
+    ? { kind:'uploaded_file', label:filename }
+    : type === '行动成果'
+      ? { kind:'action_outcome', label:'用户提交的行动成果' }
+      : type === '简历'
+        ? { kind:'resume', label:'用户确认的简历' }
+        : { kind:'manual', label:'用户输入' };
+  return JSON.stringify([
+    type,
+    filename,
+    String(meta.source?.kind || defaultSource.kind).trim(),
+    String(meta.source?.label || defaultSource.label).trim(),
+    String(content || '').replace(/\s+/g, ' ').trim()
+  ]);
+}
+
+function addEvidence(content, meta = {}) {
+  const signature = evidenceSignature(content, meta);
+  if (activeEvidenceTransaction?.signature === signature) return activeEvidenceTransaction.promise;
+  const promise = performAddEvidence(content, meta, signature).finally(() => {
+    if (activeEvidenceTransaction?.promise === promise) activeEvidenceTransaction = null;
+  });
+  activeEvidenceTransaction = { signature, promise };
+  return promise;
+}
+
+async function performAddEvidence(content, meta, signature) {
   const text = String(content || '').trim();
   if (!text) return showToast('先粘贴内容或选择一个文件');
+  const duplicate = profile.evidence.find(existing => evidenceSignature(existing.content, {
+    type:existing.type, filename:existing.filename, source:existing.source
+  }) === signature);
+  if (duplicate) {
+    showToast('这份材料已经在证据链中');
+    return duplicate;
+  }
   const previousPlan = plan;
   const item = window.PathwiseEvidence.createEvidence({ type: meta.type || $('#evidenceType').value, filename: meta.filename || '', content: text, summary: meta.summary || '', source:meta.source, verification:meta.verification, confidence:meta.confidence, supports:meta.supports, exposesGap:meta.exposesGap, quality:meta.quality });
   profile.evidence.push(item);
@@ -970,6 +1008,7 @@ async function addEvidence(content, meta = {}) {
   trackProductEvent('evidence_added', { type: item.type, changedPlan: hasMeaningfulPlanChange(previousPlan, plan), hasFile: Boolean(item.filename) });
   persistProfile();
   renderActivity();
+  return item;
 }
 
 async function parseSelectedEvidenceFile(file) {
