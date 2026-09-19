@@ -5,6 +5,7 @@ const errorJson = (error, status = 400, code = 'invalid_request') => json({ erro
 
 export async function onRequestPost({ request }) {
   try {
+    if (!request.headers.get('Content-Type')?.toLowerCase().startsWith('multipart/form-data')) return errorJson('缺少文件');
     const form = await request.formData();
     const file = form.get('file');
     if (!(file instanceof File)) return errorJson('缺少文件');

@@ -75,6 +75,9 @@ try {
   assert.equal(emptyEvidence.status, 400, 'local and cloud evidence validation must agree');
   assert.match(emptyEvidence.headers.get('content-type') || '', /application\/json/);
   assert.equal((await emptyEvidence.json()).code, 'invalid_request');
+  const malformedEvidence = await fetch(`${base}/api/evidence`, { method:'POST', body:'{}' });
+  assert.equal(malformedEvidence.status, 400);
+  assert.equal((await malformedEvidence.json()).code, 'invalid_request');
   for (const endpoint of ['/api/profile-extract', '/api/evidence-insight']) {
     const emptyContent = await fetch(`${base}${endpoint}`, { method:'POST', headers:{ 'Content-Type':'application/json' }, body:'{}' });
     assert.equal(emptyContent.status, 400, `local and cloud ${endpoint} validation must agree`);

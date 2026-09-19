@@ -402,6 +402,8 @@ class Handler(SimpleHTTPRequestHandler):
         return super().do_GET()
     def do_POST(self):
         if self.path=='/api/evidence':
+            if not self.headers.get('Content-Type','').lower().startswith('multipart/form-data'):
+                self.send_api_error('缺少文件'); return
             form=cgi.FieldStorage(fp=self.rfile,headers=self.headers,environ={'REQUEST_METHOD':'POST','CONTENT_TYPE':self.headers.get('Content-Type',''),'CONTENT_LENGTH':self.headers.get('Content-Length','')})
             fileitem=form['file'] if 'file' in form else None
             if fileitem is None or not getattr(fileitem,'filename',None): self.send_api_error('缺少文件'); return
