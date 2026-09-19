@@ -74,13 +74,19 @@
       .filter(isUsable)
       .map((item, index) => {
         const claims = list([...(item.supports || []), ...(item.insight?.proves || []), item.summary], 8);
-        const terms = roleText.match(/[\u4e00-\u9fff]{2,}|[a-z0-9+#.-]{2,}/g) || [];
+        const chunks = roleText.match(/[\u4e00-\u9fff]{2,}|[a-z0-9+#.-]{2,}/g) || [];
+        const terms = [...new Set(chunks.flatMap(chunk => /^[\u4e00-\u9fff]+$/.test(chunk)
+          ? [chunk, ...Array.from({ length:Math.max(0, chunk.length - 1) }, (_, offset) => chunk.slice(offset, offset + 2))]
+          : [chunk]))];
         const searchable = `${claims.join(' ')} ${(item.exposesGap || []).join(' ')} ${item.type}`.toLowerCase();
         const relevance = terms.reduce((score, term) => score + (searchable.includes(term) ? 1 : 0), 0);
-        return { item, claims, score:relevance * 10 + item.confidence * 3 + index / 1000 };
+        return { item, claims, relevance, score:relevance * 10 + item.confidence * 3 + index / 1000 };
       })
       .sort((a, b) => b.score - a.score);
-    const selected = candidates[0];
+    // A high-confidence document is not automatically relevant to every role.
+    // Require at least one semantic claim overlap before presenting it as the
+    // basis of a role decision; otherwise stay honest and fall back to profile facts.
+    const selected = candidates[0]?.relevance > 0 ? candidates[0] : null;
     if (selected) {
       const item = selected.item;
       return {

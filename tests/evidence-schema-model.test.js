@@ -30,5 +30,7 @@ const profileTrace = model.roleTrace({ title:'产品经理' }, [], { stage:'本�
 assert.equal(profileTrace.evidenceId, 'profile');
 assert.equal(profileTrace.verification, 'self_reported');
 assert.match(profileTrace.claim, /本科大三/);
+const unrelated = model.roleTrace({ title:'数据分析师', reason:'需要 SQL 与指标分析' }, [verified], { target:'数据分析师' });
+assert.equal(unrelated.evidenceId, 'profile', 'unrelated evidence must not be presented as role support');
 
 console.log('evidence schema model tests passed');

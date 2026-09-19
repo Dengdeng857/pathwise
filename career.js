@@ -532,7 +532,7 @@ async function explainPlanImpact(previousPlan, nextPlan, evidence) {
     }, 18000);
     if (!result?.delta || !result?.narrative?.headline) return fallback;
     const trajectory = readJSON(STORAGE.trajectory, []);
-    trajectory.push({ at:new Date().toISOString(), evidenceId:evidence?.addedAt || '', ...result });
+    trajectory.push({ at:new Date().toISOString(), evidenceId:evidence?.id || evidence?.addedAt || '', ...result });
     writeJSON(STORAGE.trajectory, trajectory.slice(-20));
     return result.narrative;
   } catch {

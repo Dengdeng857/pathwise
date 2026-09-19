@@ -8,6 +8,7 @@ for (const id of ['profileLine', 'latestChange', 'latestImpact', 'latestTitle', 
   assert.match(html, new RegExp(`id=["']${id}["']`), `report.html should contain #${id}`);
 }
 assert.match(script, /pathwiseTrajectoryHistory/, 'report should consume trajectory history');
+assert.match(script, /entry\?\.id === item\.evidenceId/, 'report should link trajectory to stable evidence ids');
 assert.match(script, /pathwiseProfile/, 'report should resolve evidence and profile context');
 assert.match(html, /evidence-schema-model\.js/, 'report should load the shared evidence schema');
 assert.match(script, /PathwiseEvidence/, 'report should normalize legacy evidence through the shared schema');

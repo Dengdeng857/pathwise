@@ -15,7 +15,7 @@ const labels = { 'route-change':'路线改变', 'priority-shift':'优先级调�
 document.body.classList.add(trajectory.length ? 'has-trajectory' : 'empty-report');
 
 function evidenceFor(item) {
-  const linked = evidence.find(entry => entry?.addedAt && entry.addedAt === item.evidenceId);
+  const linked = evidence.find(entry => entry?.id === item.evidenceId || (entry?.addedAt && entry.addedAt === item.evidenceId));
   return linked || item.delta?.evidence || {};
 }
 
