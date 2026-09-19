@@ -1311,7 +1311,7 @@ function bindEvents() {
     openDrawer({
       kicker: ['ROLE / NOW', 'ROLE / GRADUATION', 'ROLE / STRETCH'][Number(button.dataset.roleIndex)] || 'ROLE GUIDE',
       title: role.title || '岗位建议', intro: role.reason || '',
-      content: `<div class="role-proof"><small>岗位判断依据</small><strong>${escapeHtml(trace.claim)}</strong><p>${escapeHtml(trace.verificationLabel)} · ${escapeHtml(trace.sourceLabel)} · 置信度 ${Math.round(Number(trace.confidence || 0) * 100)}%</p><code>${escapeHtml(trace.evidenceId)} · ${escapeHtml(traceDate)}</code></div><div class="guide-detail"><h3>仍需补齐</h3><ol>${gaps.slice(0, 3).map((gap, index) => `<li><b>0${index + 1}</b><span>${escapeHtml(gap)}</span></li>`).join('')}</ol></div><div class="guide-evidence"><small>下一步</small><p>优先完成行动路径中的第一项，并用成果更新这张岗位地图。</p></div>`
+      content: `<div class="role-proof"><small>岗位判断依据</small><strong>${escapeHtml(trace.claim)}</strong>${trace.quote ? `<blockquote>“${escapeHtml(trace.quote)}”</blockquote>` : ''}<p>${escapeHtml(trace.verificationLabel)} · ${escapeHtml(trace.sourceLabel)} · 置信度 ${Math.round(Number(trace.confidence || 0) * 100)}%</p><code>${escapeHtml(trace.evidenceId)} · ${escapeHtml(traceDate)}</code></div><div class="guide-detail"><h3>仍需补齐</h3><ol>${gaps.slice(0, 3).map((gap, index) => `<li><b>0${index + 1}</b><span>${escapeHtml(gap)}</span></li>`).join('')}</ol></div><div class="guide-evidence"><small>下一步</small><p>优先完成行动路径中的第一项，并用成果更新这张岗位地图。</p></div>`
     });
   }));
 

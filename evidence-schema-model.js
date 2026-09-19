@@ -67,6 +67,21 @@
     return value === 'verified' ? '已验证成果' : value === 'supported' ? '有材料支持' : '用户自述';
   }
 
+  function evidenceQuote(item, terms = [], claims = []) {
+    const sentences = `${item.summary || ''}\n${item.content || ''}`
+      .split(/[\n。！？!?；;]/)
+      .map(value => text(value.replace(/\s+/g, ' '), 220))
+      .filter(value => value.length >= 6);
+    const signals = [...new Set([...terms, ...claims.flatMap(claim => claim.match(/[\u4e00-\u9fff]{2,}|[a-z0-9+#.-]{2,}/gi) || [])])]
+      .map(value => String(value).toLowerCase())
+      .filter(Boolean);
+    const ranked = sentences.map((sentence, index) => ({
+      sentence,
+      score:signals.reduce((score, signal) => score + (sentence.toLowerCase().includes(signal) ? Math.max(1, Math.min(4, signal.length)) : 0), 0) - index / 1000
+    })).sort((a, b) => b.score - a.score);
+    return text((ranked.find(item => item.score > 0) || ranked[0] || {}).sentence, 180);
+  }
+
   function roleTrace(role = {}, evidence = [], profile = {}) {
     const roleText = `${role.title || ''} ${role.reason || ''}`.toLowerCase();
     const candidates = (Array.isArray(evidence) ? evidence : [])
@@ -80,7 +95,7 @@
           : [chunk]))];
         const searchable = `${claims.join(' ')} ${(item.exposesGap || []).join(' ')} ${item.type}`.toLowerCase();
         const relevance = terms.reduce((score, term) => score + (searchable.includes(term) ? 1 : 0), 0);
-        return { item, claims, relevance, score:relevance * 10 + item.confidence * 3 + index / 1000 };
+        return { item, claims, terms, relevance, score:relevance * 10 + item.confidence * 3 + index / 1000 };
       })
       .sort((a, b) => b.score - a.score);
     // A high-confidence document is not automatically relevant to every role.
@@ -92,6 +107,7 @@
       return {
         evidenceId:item.id,
         claim:selected.claims[0] || `${item.type || '材料'}已进入岗位判断`,
+        quote:evidenceQuote(item, selected.terms, selected.claims),
         sourceLabel:item.type || '职业材料',
         verification:item.verification,
         verificationLabel:verificationLabel(item),
@@ -103,6 +119,7 @@
     return {
       evidenceId:'profile',
       claim:facts.length ? facts.join(' · ') : '尚未提供可验证材料',
+      quote:'',
       sourceLabel:'用户确认的职业画像',
       verification:'self_reported',
       verificationLabel:'用户自述',
@@ -120,7 +137,7 @@
     };
     return {
       ...plan,
-      evidenceTraceVersion:1,
+      evidenceTraceVersion:2,
       currentRoles:(Array.isArray(plan.currentRoles) ? plan.currentRoles : []).map(attach),
       graduationRoles:(Array.isArray(plan.graduationRoles) ? plan.graduationRoles : []).map(attach)
     };

@@ -29,6 +29,7 @@ assert.match(careerJs, /activeRecalculation\?\.signature === signature/, 'concur
 assert.match(careerJs, /chunk\?\.error[\s\S]{0,180}code:'upstream'/, 'SSE error frames must remain distinguishable from truncated JSON');
 assert.match(careerHtml, /class="role-evidence"/g, 'role cards must expose their evidence basis');
 assert.match(careerJs, /PathwiseEvidence\.roleTrace/, 'role decisions must resolve to deterministic evidence traces');
+assert.match(careerJs, /trace\.quote/, 'role decision drawer must expose a reviewable evidence sentence');
 assert.match(careerJs, /evidenceId:evidence\?\.id \|\| evidence\?\.addedAt/, 'trajectory must persist the stable evidence id');
 assert.match(careerJs, /function buildLocalTrajectoryResult/, 'trajectory must have a deterministic local fallback');
 assert.match(careerJs, /persistTrajectoryResult\(fallback, evidence\)/, 'API failure must still persist evidence-to-route history');
