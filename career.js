@@ -13,6 +13,7 @@ const STORAGE = {
   commitments: 'pathwiseActionCommitments',
   taskEvents: 'pathwiseTaskEvents',
   taskProofs: 'pathwiseTaskProofs',
+  planMeta: 'pathwisePlanMeta',
   theme: 'pathwiseTheme'
 };
 const DEFAULT_PROFILE = {
@@ -28,6 +29,25 @@ const DEFAULT_PROFILE = {
 const isLocalHost = location.hostname === '127.0.0.1' || location.hostname === 'localhost';
 const apiOrigin = location.protocol === 'file:' || (isLocalHost && location.port !== '8787') ? 'http://127.0.0.1:8787' : '';
 const api = path => `${apiOrigin}${path}`;
+const makeRequestId = () => `pw_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+
+class APIRequestError extends Error {
+  constructor(message, { code = 'unknown', requestId = '', status = 0 } = {}) {
+    super(message); this.name = 'APIRequestError'; this.code = code; this.requestId = requestId; this.status = status;
+  }
+}
+function classifyAPIError(error, status = 0) {
+  const message = String(error?.message || '');
+  if (error?.name === 'AbortError' || /超时|timeout/i.test(message) || [408, 504, 524].includes(status)) return 'timeout';
+  if (/Key 未配置|未配置/.test(message)) return 'not_configured';
+  if (/JSON|解析|字段|占位符|内容为空|格式/.test(message)) return 'invalid_response';
+  if (status >= 500) return 'upstream';
+  if (status >= 400) return 'request';
+  return 'network';
+}
+function diagnosticLabel(error) {
+  return ({ timeout:'上游响应超时', not_configured:'在线模型未配置', invalid_response:'模型响应未通过校验', upstream:'上游模型服务异常', request:'请求内容有误', network:'网络连接失败' })[error?.code] || '未知错误';
+}
 
 function readJSON(key, fallback) {
   try { return JSON.parse(localStorage.getItem(key)) ?? fallback; }
@@ -233,12 +253,18 @@ function finishProgress(message = '路径已更新') {
 
 async function requestJSON(path, options = {}, timeout = 180000) {
   const controller = new AbortController();
+  const requestId = makeRequestId();
   const timer = setTimeout(() => controller.abort(), timeout);
   try {
-    const response = await fetch(api(path), { ...options, signal: controller.signal });
+    const headers = new Headers(options.headers || {});
+    headers.set('X-Pathwise-Request-Id', requestId);
+    const response = await fetch(api(path), { ...options, headers, signal: controller.signal });
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
+    if (!response.ok) throw new APIRequestError(data.error || `HTTP ${response.status}`, { code:classifyAPIError({ message:data.error }, response.status), requestId, status:response.status });
     return data;
+  } catch (error) {
+    if (error instanceof APIRequestError) throw error;
+    throw new APIRequestError(error?.name === 'AbortError' ? `请求超过 ${Math.round(timeout / 1000)} 秒` : String(error?.message || error), { code:classifyAPIError(error), requestId });
   } finally {
     clearTimeout(timer);
   }
@@ -246,10 +272,14 @@ async function requestJSON(path, options = {}, timeout = 180000) {
 
 async function requestStreamingPlan(body) {
   const controller = new AbortController();
+  const requestId = makeRequestId();
   const timer = setTimeout(() => controller.abort(), 180000);
   try {
-    const response = await fetch(api('/api/plan'), { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' }, body: JSON.stringify(body), signal: controller.signal });
-    if (!response.ok || !response.body) throw new Error(`HTTP ${response.status}`);
+    const response = await fetch(api('/api/plan'), { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream', 'X-Pathwise-Request-Id':requestId }, body: JSON.stringify(body), signal: controller.signal });
+    if (!response.ok || !response.body) {
+      const payload = await response.json().catch(() => ({}));
+      throw new APIRequestError(payload.error || `HTTP ${response.status}`, { code:classifyAPIError({ message:payload.error }, response.status), requestId, status:response.status });
+    }
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '', raw = '', content = '', finishReason = '';
@@ -302,7 +332,7 @@ async function requestStreamingPlan(body) {
         }
       }
     }
-    if (!content.trim()) throw new Error('流式规划没有返回内容');
+    if (!content.trim()) throw new APIRequestError('流式规划没有返回内容', { code:'invalid_response', requestId });
     // Gateways may return a JSON object followed by usage metadata or a second
     // JSON frame. Keep only the first complete object for the planner.
     const cleaned = content.replace(/^```(?:json)?\s*|\s*```$/g, '').trim();
@@ -345,7 +375,10 @@ async function requestStreamingPlan(body) {
       } catch (_) {}
     }
     console.warn('Pathwise planner response could not be parsed', { length:cleaned.length, finishReason });
-    throw new Error(finishReason === 'length' ? '模型输出达到长度上限，规划 JSON 未完整返回' : '流式规划返回内容无法解析');
+    throw new APIRequestError(finishReason === 'length' ? '模型输出达到长度上限，规划 JSON 未完整返回' : '流式规划返回内容无法解析', { code:'invalid_response', requestId });
+  } catch (error) {
+    if (error instanceof APIRequestError) throw error;
+    throw new APIRequestError(error?.name === 'AbortError' ? '规划请求超过 180 秒' : String(error?.message || error), { code:classifyAPIError(error), requestId });
   } finally { clearTimeout(timer); }
 }
 
@@ -712,6 +745,9 @@ async function recalculate(successMessage = '路径已经根据新信息更新�
     plan = { ...result, source: result.source || 'ai' };
     recordPlanVersion(previousPlan, plan, '这次更新', plan.source);
     writeJSON(STORAGE.plan, plan);
+    writeJSON(STORAGE.planMeta, { lastValidAt:new Date().toISOString(), source:plan.source });
+    $('#planRetry').hidden = true;
+    $('#planDiagnostic').hidden = true;
     renderAll(plan);
     renderPlanDelta(previousPlan, plan, '这次更新');
     finishProgress();
@@ -721,7 +757,7 @@ async function recalculate(successMessage = '路径已经根据新信息更新�
     trackProductEvent('plan_completed', { source: plan.source, changed: hasMeaningfulPlanChange(previousPlan, plan) });
     return true;
   } catch (error) {
-    const reason = error.name === 'AbortError' ? '模型响应超时' : error.message;
+    const reason = error.message;
     let keptPrevious = false;
     try {
       validatePlanResult(previousPlan);
@@ -735,7 +771,9 @@ async function recalculate(successMessage = '路径已经根据新信息更新�
     renderAll(plan);
     if (keptPrevious) {
       $('#planDeltaTitle').textContent = '暂时保留上次有效路径';
-      $('#planDeltaText').textContent = `这次智能规划没有完成（${compact(reason, 58)}）。原有路径没有被覆盖，等服务恢复后可以再次更新。`;
+      const meta = readJSON(STORAGE.planMeta, {});
+      const lastValid = meta.lastValidAt ? new Date(meta.lastValidAt).toLocaleString('zh-CN', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' }) : '之前';
+      $('#planDeltaText').textContent = `这次智能规划没有完成（${diagnosticLabel(error)}）。已保留 ${lastValid} 的有效路径。`;
       $('#planDelta').hidden = false;
     } else {
       renderPlanDelta(previousPlan, plan, '这次更新');
@@ -744,6 +782,9 @@ async function recalculate(successMessage = '路径已经根据新信息更新�
     showToast(keptPrevious ? '智能规划未完成，已保留上次有效路径' : '新信息已保存，当前路径保持可用');
     companionSay(keptPrevious ? '这次响应没有通过校验，我先保护好上一版路径，稍后可以重试。' : '智能规划暂时没有完成响应，但你的信息没有丢失，可以稍后再次更新。');
     setAIStatus(keptPrevious ? '暂时保留上次路径 · 稍后重试' : '路径已更新 · 使用本地规划', false);
+    $('#planDiagnostic').textContent = `诊断 ${error.code || 'unknown'} · 请求 ${error.requestId || 'local'}`;
+    $('#planDiagnostic').hidden = false;
+    $('#planRetry').hidden = false;
     console.warn('Pathwise plan request failed:', error);
     return false;
   }
@@ -1026,6 +1067,11 @@ function bindEvents() {
     setWorkspaceView('evidence');
     $('[data-compose="update"]').click();
     setTimeout(() => $('#updateInput').focus(), 350);
+  });
+  $('#planRetry').addEventListener('click', async () => {
+    $('#planRetry').disabled = true;
+    try { await recalculate('路径服务恢复后，我已经重新校准了路线。'); }
+    finally { $('#planRetry').disabled = false; }
   });
   $$('.checkin button').forEach(button => button.addEventListener('click', () => {
     profile.mood = button.dataset.mood;

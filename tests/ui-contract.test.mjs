@@ -21,6 +21,9 @@ assert.ok(careerHtml.indexOf('evidence-quality-model.js') < careerHtml.indexOf('
 assert.ok(careerHtml.indexOf('evidence-schema-model.js') < careerHtml.indexOf('career.js'), 'evidence schema model must load before the workbench');
 assert.match(careerHtml, /id=["']outcomeQuality["']/, 'outcome modal must explain evidence quality');
 assert.match(careerHtml, /id=["']outcomeSaveProgress["']/, 'weak outcomes must remain saveable as progress');
+assert.match(careerHtml, /id=["']planRetry["']/, 'failed planning must expose a safe retry action');
+assert.match(careerJs, /X-Pathwise-Request-Id/, 'API calls must carry a diagnosable request id');
+assert.match(careerJs, /lastValidAt/, 'the UI must retain the last valid plan timestamp');
 assert.ok(labHtml.indexOf('path-model.js') < labHtml.indexOf('lab.js'), 'shared model must load before direction comparison');
 assert.ok(mapHtml.indexOf('path-model.js') < mapHtml.indexOf('map.js'), 'shared model must load before the map');
 assert.ok(mapHtml.indexOf('game-feedback-model.js') < mapHtml.indexOf('map.js'), 'feedback model must load before the map');
