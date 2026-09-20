@@ -32,7 +32,7 @@ assert.match(careerJs, /PathwiseEvidence\.roleTrace/, 'role decisions must resol
 assert.match(careerJs, /trace\.quote/, 'role decision drawer must expose a reviewable evidence sentence');
 assert.match(careerJs, /evidenceId:evidence\?\.id \|\| evidence\?\.addedAt/, 'trajectory must persist the stable evidence id');
 assert.match(careerJs, /function buildLocalTrajectoryResult/, 'trajectory must have a deterministic local fallback');
-assert.match(careerJs, /persistTrajectoryResult\(fallback, evidence\)/, 'API failure must still persist evidence-to-route history');
+assert.match(careerJs, /persistTrajectoryResult\(attachTrajectoryQuote\(fallback, nextPlan, evidence\), evidence\)/, 'API failure must still persist evidence-to-route history');
 assert.match(careerJs, /lastAttemptAt/, 'planning failures must remain diagnosable after reload');
 assert.match(careerJs, /lastError: \{ code:error\.code/, 'planning failures must persist code and request id');
 assert.match(careerJs, /已保留本地状态/, 'failure state must tell users their local path is still available');

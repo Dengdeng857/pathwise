@@ -14,6 +14,9 @@ assert.match(html, /evidence-schema-model\.js/, 'report should load the shared e
 assert.match(script, /PathwiseEvidence/, 'report should normalize legacy evidence through the shared schema');
 assert.match(script, /delta\.gaps\?\.resolved/, 'report should surface resolved gaps');
 assert.match(script, /delta\.roleChanges/, 'report should surface role changes');
+assert.match(html, /id=["']latestQuote["']/, 'report should expose the latest reviewable evidence quote');
+assert.match(html, /class=["']history-quote["']/, 'history entries should expose their evidence quote');
+assert.match(script, /evidenceQuoteFor/, 'report should resolve evidence quotes from shared trajectory state');
 assert.match(script, /aria-expanded/, 'history details should be accessible');
 assert.match(script, /history-item\.open/, 'opening an entry should close the previous one');
 assert.match(script, /empty-report/, 'empty history should use the compact product state');

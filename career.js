@@ -576,6 +576,14 @@ function persistTrajectoryResult(result, evidence) {
   writeJSON(STORAGE.trajectory, trajectory.slice(-20));
 }
 
+function attachTrajectoryQuote(result, nextPlan, evidence) {
+  if (!result?.delta || !evidence) return result;
+  const roles = [...(nextPlan?.currentRoles || []), ...(nextPlan?.graduationRoles || [])];
+  const trace = roles.map(role => role.evidenceTrace).find(item => item?.evidenceId === evidence.id && item.quote);
+  if (!trace?.quote) return result;
+  return { ...result, delta:{ ...result.delta, evidence:{ ...result.delta.evidence, quote:trace.quote } } };
+}
+
 async function explainPlanImpact(previousPlan, nextPlan, evidence) {
   const fallback = buildLocalTrajectoryResult(previousPlan, nextPlan, evidence);
   try {
@@ -587,11 +595,12 @@ async function explainPlanImpact(previousPlan, nextPlan, evidence) {
         previousPlan:previousPlan || {}, nextPlan:nextPlan || {}
       })
     }, 18000);
-    if (!result?.delta || !result?.narrative?.headline) { persistTrajectoryResult(fallback, evidence); return fallback.narrative; }
-    persistTrajectoryResult(result, evidence);
-    return result.narrative;
+    if (!result?.delta || !result?.narrative?.headline) { persistTrajectoryResult(attachTrajectoryQuote(fallback, nextPlan, evidence), evidence); return fallback.narrative; }
+    const enriched = attachTrajectoryQuote(result, nextPlan, evidence);
+    persistTrajectoryResult(enriched, evidence);
+    return enriched.narrative;
   } catch {
-    persistTrajectoryResult(fallback, evidence);
+    persistTrajectoryResult(attachTrajectoryQuote(fallback, nextPlan, evidence), evidence);
     return fallback.narrative;
   }
 }

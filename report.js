@@ -21,6 +21,10 @@ function evidenceFor(item) {
   return linked || item.delta?.evidence || {};
 }
 
+function evidenceQuoteFor(item, source) {
+  return compact(source?.quote || item?.delta?.evidence?.quote || '', 220);
+}
+
 function dateLabel(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '历史记录';
@@ -62,6 +66,9 @@ function renderLatest() {
   document.querySelector('#latestKind').textContent = `${labels[item.delta.kind] || '路径更新'} · ${evidenceMeta(source)}`;
   document.querySelector('#latestTitle').textContent = item.narrative.headline;
   document.querySelector('#latestWhy').textContent = item.narrative.why;
+  const quote = document.querySelector('#latestQuote');
+  quote.textContent = `“${evidenceQuoteFor(item, source)}”`;
+  quote.hidden = !evidenceQuoteFor(item, source);
   document.querySelector('#latestMeta').textContent = `${dateLabel(source.capturedAt || item.at)} · ${confidenceLabel(source.confidence * 100 || item.narrative.confidence)}`;
   document.querySelector('#latestNext').textContent = item.narrative.nextMove;
 }
@@ -86,6 +93,10 @@ function makeHistoryItem(item) {
   fragment.querySelector('.history-kind').textContent = `${labels[delta.kind] || '路径更新'} · ${evidenceMeta(source)}`;
   fragment.querySelector('.history-title').textContent = item.narrative.headline;
   fragment.querySelector('.history-why').textContent = item.narrative.why;
+  const quote = evidenceQuoteFor(item, source);
+  const quoteNode = fragment.querySelector('.history-quote');
+  quoteNode.textContent = quote ? `“${quote}”` : '';
+  quoteNode.hidden = !quote;
   fragment.querySelector('.history-impact').textContent = `${delta.impactScore || 0} IMPACT`;
   const roles = (delta.roleChanges || []).map(roleText);
   const gaps = [...(delta.gaps?.resolved || []).map(value => `已补齐 · ${value}`), ...(delta.gaps?.added || []).map(value => `新发现 · ${value}`)];
