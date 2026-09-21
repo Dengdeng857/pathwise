@@ -259,10 +259,14 @@ const lastChange = history[history.length - 1];
 const lastTrajectory = trajectory[trajectory.length - 1];
 if (lastTrajectory?.narrative) {
   const source = evidence.find(item => item.id === lastTrajectory.evidenceId || item.addedAt === lastTrajectory.evidenceId) || window.PathwiseEvidence.normalizeEvidence(lastTrajectory.delta?.evidence || {});
+  const evidenceQuote = compact(source.quote || lastTrajectory.delta?.evidence?.quote || '', 180);
+  const quoteNode = $('#rerouteQuote') || (() => { const node = document.createElement('q'); node.id = 'rerouteQuote'; $('#rerouteNote').append(node); return node; })();
   $('#rerouteNote').hidden = false;
   $('#rerouteTitle').textContent = lastTrajectory.narrative.headline;
   $('#rerouteReason').textContent = lastTrajectory.narrative.why;
   $('#rerouteSource').textContent = `依据 · ${window.PathwiseEvidence.verificationLabel(source)} · ${compact(source.source?.label || source.type || '新增证据', 30)}`;
+  quoteNode.textContent = evidenceQuote;
+  quoteNode.hidden = !evidenceQuote;
   $('#mapUpdated').textContent = `${lastTrajectory.source === 'ai' ? 'AI 解释' : '规则校准'} · ${new Date(lastTrajectory.at).toLocaleDateString('zh-CN')}`;
 } else if (lastChange) {
   $('#rerouteNote').hidden = false;

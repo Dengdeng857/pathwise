@@ -59,6 +59,7 @@ assert.equal((mapHtml.match(/data-map-layer=/g) || []).length, 3, 'map must expo
 assert.match(mapHtml, /class="route-terrain"/, 'map must preserve chapter terrain instead of falling back to a plain chart');
 assert.match(mapJs, /destinationFork/, 'career alternatives must share one readable fork point');
 assert.match(mapJs, /verificationLabel/, 'map reroutes must expose the evidence verification level');
+assert.match(mapJs, /evidenceQuote/, 'map reroutes must expose the reviewable evidence quote');
 assert.match(mapJs, /curvePath\(/, 'career routes must render as a map-like curved path');
 assert.match(careerJs, /class="guide-step/, 'action guide must expose executable micro-steps');
 assert.match(careerJs, /aria-pressed/, 'micro-step controls must expose accessible state');
