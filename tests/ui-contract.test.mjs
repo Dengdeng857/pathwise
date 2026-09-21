@@ -30,6 +30,10 @@ assert.match(careerJs, /chunk\?\.error[\s\S]{0,180}code:'upstream'/, 'SSE error 
 assert.match(careerHtml, /class="role-evidence"/g, 'role cards must expose their evidence basis');
 assert.match(careerJs, /PathwiseEvidence\.roleTrace/, 'role decisions must resolve to deterministic evidence traces');
 assert.match(careerJs, /trace\.quote/, 'role decision drawer must expose a reviewable evidence sentence');
+for (const id of ['pulseTarget', 'pulseGap', 'pulseEvidence', 'pulseEvidenceMeta']) {
+  assert.match(careerHtml, new RegExp(`id=["']${id}["']`), `decision pulse is missing #${id}`);
+}
+assert.match(careerJs, /pulseEvidenceMeta/, 'the unique action must expose its evidence provenance');
 assert.match(careerJs, /evidenceId:evidence\?\.id \|\| evidence\?\.addedAt/, 'trajectory must persist the stable evidence id');
 assert.match(careerJs, /function buildLocalTrajectoryResult/, 'trajectory must have a deterministic local fallback');
 assert.match(careerJs, /persistTrajectoryResult\(attachTrajectoryQuote\(fallback, nextPlan, evidence\), evidence\)/, 'API failure must still persist evidence-to-route history');

@@ -465,7 +465,9 @@ function renderDecision(currentPlan) {
   const awaitingProof = next && completedTasks.has(next.dataset.task) && !verifiedTasks.has(next.dataset.task);
   const commitment = next ? actionCommitments[next.dataset.task] : null;
   const gaps = (currentPlan?.gaps || []).filter(Boolean);
-  const role = pickRoles(currentPlan || makeLocalPlan())[1]?.title || profile.target || '目标岗位';
+  const graduationRole = pickRoles(currentPlan || makeLocalPlan())[1] || {};
+  const role = graduationRole.title || profile.target || '目标岗位';
+  const trace = graduationRole.evidenceTrace || window.PathwiseEvidence.roleTrace(graduationRole, profile.evidence, profile);
   const gap = compact(gaps[0] || '补充一条真实成果', 18);
   $('#decisionTitle').textContent = next?.dataset.task || '补充一条真实进展';
   $('#decisionReason').textContent = awaitingProof
@@ -474,6 +476,8 @@ function renderDecision(currentPlan) {
       : next ? `这一步会直接补齐“${gap}”，完成后可以重新判断你距离 ${role} 还差什么。` : '你已经完成当前行动清单，记录新的进展后会生成下一轮优先级。';
   $('#pulseTarget').textContent = compact(role.replace(/（.*?）/g, ''), 15);
   $('#pulseGap').textContent = gap;
+  $('#pulseEvidence').textContent = compact(trace.quote || trace.claim || '等待真实经历', 28);
+  $('#pulseEvidenceMeta').textContent = `${trace.verificationLabel || '用户确认'} · ${compact(trace.sourceLabel || '职业画像', 18)}`;
   $('#decisionCta').textContent = awaitingProof ? '补充行动成果 →' : commitment ? '继续当前行动 →' : next ? '打开这一步 →' : '记录新进展 →';
   $('#decisionCta').dataset.task = next?.dataset.task || '';
   const moodText = { steady: '今天按一个小步推进就很好。', anxious: '先只做最小的一步，不需要今天解决全部问题。', tired: '今天可以只整理材料，完成比强撑更重要。' }[profile.mood] || '';
