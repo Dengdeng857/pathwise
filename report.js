@@ -55,6 +55,20 @@ function listHtml(items, empty) {
   return items.length ? items.map(item => `<li>${safe(item)}</li>`).join('') : `<li class="muted">${safe(empty)}</li>`;
 }
 
+function latestDeltaText(item) {
+  const delta = item.delta || {};
+  const role = (delta.roleChanges || [])[0];
+  const resolvedGap = delta.gaps?.resolved?.[0];
+  const addedGap = delta.gaps?.added?.[0];
+  const addedAction = delta.actions?.added?.[0];
+  const pausedAction = delta.actions?.deprioritized?.[0];
+  return {
+    role:role ? roleText(role) : '岗位判断保持稳定',
+    gap:resolvedGap ? `已补齐 · ${resolvedGap}` : addedGap ? `新发现 · ${addedGap}` : '关键差距保持稳定',
+    action:addedAction ? `优先 · ${addedAction}` : pausedAction ? `暂缓 · ${pausedAction}` : '行动顺序保持稳定'
+  };
+}
+
 function renderLatest() {
   const item = trajectory[0];
   if (!item) {
@@ -70,6 +84,11 @@ function renderLatest() {
   quote.textContent = `“${evidenceQuoteFor(item, source)}”`;
   quote.hidden = !evidenceQuoteFor(item, source);
   document.querySelector('#latestMeta').textContent = `${dateLabel(source.capturedAt || item.at)} · ${confidenceLabel(source.confidence * 100 || item.narrative.confidence)}`;
+  const changes = latestDeltaText(item);
+  document.querySelector('#latestDelta').hidden = false;
+  document.querySelector('#latestRoleDelta').textContent = changes.role;
+  document.querySelector('#latestGapDelta').textContent = changes.gap;
+  document.querySelector('#latestActionDelta').textContent = changes.action;
   document.querySelector('#latestNext').textContent = item.narrative.nextMove;
 }
 
