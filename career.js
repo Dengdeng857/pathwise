@@ -781,6 +781,38 @@ function buildGrowthShareText() {
   return lines.filter(Boolean).join('\n');
 }
 
+function stripPrivateExportFields(value) {
+  const privateFields = new Set(['content', 'filename', 'quote', 'excerpt', 'sourceLabel', 'link', 'url']);
+  if (Array.isArray(value)) return value.map(stripPrivateExportFields);
+  if (!value || typeof value !== 'object') return value;
+  return Object.fromEntries(Object.entries(value)
+    .filter(([key]) => !privateFields.has(key))
+    .map(([key, item]) => [key, stripPrivateExportFields(item)]));
+}
+
+function buildPrivacySafeExport() {
+  const publicProfile = {
+    stage:profile.stage, school:profile.school, major:profile.major, target:profile.target,
+    evidence:profile.evidence.map(item => ({
+      id:item.id, type:item.type, capturedAt:item.capturedAt, source:{ kind:item.source?.kind || '' },
+      verification:item.verification, confidence:item.confidence, supports:item.supports || [],
+      exposesGap:item.exposesGap || [], impact:item.impact || '', quality:item.quality || null
+    }))
+  };
+  return {
+    schemaVersion:1,
+    privacyMode:'redacted',
+    privacyNote:'已移除简历与证据原文、文件名、链接和证据引用句。',
+    profile:publicProfile,
+    plan:stripPrivateExportFields(plan),
+    completedTasks:[...completedTasks],
+    verifiedTasks:[...verifiedTasks],
+    commitments:stripPrivateExportFields(actionCommitments),
+    trajectory:stripPrivateExportFields(readJSON(STORAGE.trajectory, [])),
+    generatedAt:new Date().toISOString()
+  };
+}
+
 async function copyText(text) {
   if (navigator.clipboard?.writeText) return navigator.clipboard.writeText(text);
   const input = document.createElement('textarea');
@@ -1539,14 +1571,14 @@ function bindEvents() {
   });
 
   $('#growthExport').addEventListener('click', () => {
-    const report = { profile, plan, completedTasks: [...completedTasks], generatedAt: new Date().toISOString() };
+    const report = buildPrivacySafeExport();
     const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = 'pathwise-growth-report.json';
     link.click();
     URL.revokeObjectURL(link.href);
-    showToast('成长报告已导出');
+    showToast('隐私版成长数据已导出，未包含材料原文');
   });
 
   document.addEventListener('keydown', event => {
