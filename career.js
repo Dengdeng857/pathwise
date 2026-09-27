@@ -781,13 +781,15 @@ function buildGrowthShareText() {
   return lines.filter(Boolean).join('\n');
 }
 
-function stripPrivateExportFields(value) {
+function stripPrivateExportFields(value, parentKey = '') {
   const privateFields = new Set(['content', 'filename', 'quote', 'excerpt', 'sourceLabel', 'link', 'url']);
-  if (Array.isArray(value)) return value.map(stripPrivateExportFields);
+  if (Array.isArray(value)) return value.map(item => stripPrivateExportFields(item, parentKey));
   if (!value || typeof value !== 'object') return value;
   return Object.fromEntries(Object.entries(value)
-    .filter(([key]) => !privateFields.has(key))
-    .map(([key, item]) => [key, stripPrivateExportFields(item)]));
+    .filter(([key]) => !privateFields.has(key)
+      && !(key === 'label' && ['evidence', 'source'].includes(parentKey))
+      && !(key === 'claim' && parentKey === 'evidenceTrace'))
+    .map(([key, item]) => [key, stripPrivateExportFields(item, key)]));
 }
 
 function buildPrivacySafeExport() {
